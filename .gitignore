@@ -37,3 +37,6 @@ build/
 *.env
 secrets.json
 config.json
+venv/
+env/
+.env
