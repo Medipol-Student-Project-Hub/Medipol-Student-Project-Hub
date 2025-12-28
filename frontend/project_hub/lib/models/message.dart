@@ -20,15 +20,46 @@ class Conversation {
   });
 
   factory Conversation.fromJson(Map<String, dynamic> json) {
+    // Backend’te last_message bazen Map, bazen String/null gelebiliyor.
+    final dynamic lm = json['last_message'] ?? json['lastMessage'];
+
+    String lastMessage = '';
+    String lastMessageTime = '';
+
+    if (lm is Map<String, dynamic>) {
+      lastMessage = (lm['content'] ?? '').toString();
+      lastMessageTime = (lm['created_at'] ?? '').toString();
+    } else if (lm is String) {
+      lastMessage = lm;
+    }
+
+    // Bazı backend cevaplarında ayrı alanlar da olabiliyor
+    if (lastMessage.isEmpty) {
+      lastMessage = (json['last_message_text'] ??
+              json['lastMessageText'] ??
+              json['last_message_content'] ??
+              '')
+          .toString();
+    }
+
+    if (lastMessageTime.isEmpty) {
+      lastMessageTime =
+          (json['last_message_time'] ?? json['lastMessageTime'] ?? '').toString();
+    }
+
+    // unreadCount bazen string gibi gelebilir
+    final dynamic uc = json['unread_count'] ?? json['unreadCount'] ?? 0;
+    final int unreadCount = uc is int ? uc : int.tryParse(uc.toString()) ?? 0;
+
     return Conversation(
       id: json['id'].toString(),
-      name: json['name'] ?? 'Unknown',
-      avatar: json['avatar'],
-      lastMessage: json['last_message']?['content'] ?? json['lastMessage'] ?? '',
-      lastMessageTime: json['last_message']?['created_at'] ?? json['lastMessageTime'] ?? '',
-      unreadCount: json['unread_count'] ?? json['unreadCount'] ?? 0,
-      isOnline: json['is_online'] ?? json['isOnline'] ?? false,
-      isGroup: json['is_group'] ?? json['isGroup'] ?? false,
+      name: (json['name'] ?? 'Unknown').toString(),
+      avatar: json['avatar']?.toString(),
+      lastMessage: lastMessage,
+      lastMessageTime: lastMessageTime,
+      unreadCount: unreadCount,
+      isOnline: (json['is_online'] ?? json['isOnline'] ?? false) == true,
+      isGroup: (json['is_group'] ?? json['isGroup'] ?? false) == true,
     );
   }
 }
@@ -51,13 +82,22 @@ class Message {
   });
 
   factory Message.fromJson(Map<String, dynamic> json) {
+    // sender bazen obje bazen string gelebilir
+    final dynamic s = json['sender'];
+    String senderName = 'Unknown';
+    if (s is Map<String, dynamic>) {
+      senderName = (s['name'] ?? s['email'] ?? 'Unknown').toString();
+    } else if (s is String) {
+      senderName = s;
+    }
+
     return Message(
       id: json['id'].toString(),
-      conversationId: json['conversation']?.toString() ?? json['conversationId']?.toString() ?? '',
-      sender: json['sender']?['name'] ?? json['sender'] ?? 'Unknown',
-      content: json['content'] ?? '',
-      time: json['created_at'] ?? json['time'] ?? '',
-      isOwn: json['is_own'] ?? json['isOwn'] ?? false,
+      conversationId: (json['conversation'] ?? json['conversationId'] ?? '').toString(),
+      sender: senderName,
+      content: (json['content'] ?? '').toString(),
+      time: (json['created_at'] ?? json['time'] ?? '').toString(),
+      isOwn: (json['is_own'] ?? json['isOwn'] ?? false) == true,
     );
   }
 }
