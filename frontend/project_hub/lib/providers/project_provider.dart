@@ -15,7 +15,6 @@ class ProjectProvider with ChangeNotifier {
   bool get isLoading => _isLoading;
   String? get error => _error;
 
-  /// Load all projects from API
   Future<void> loadProjects() async {
     try {
       _isLoading = true;
@@ -34,7 +33,6 @@ class ProjectProvider with ChangeNotifier {
     }
   }
 
-  /// Load my projects from API
   Future<void> loadMyProjects() async {
     try {
       _isLoading = true;
@@ -53,7 +51,6 @@ class ProjectProvider with ChangeNotifier {
     }
   }
 
-  /// Get project by ID
   Future<Project?> getProjectById(String id) async {
     try {
       return await _projectService.getProjectById(id);
@@ -64,14 +61,12 @@ class ProjectProvider with ChangeNotifier {
     }
   }
 
-  /// Search projects locally (already loaded)
   void searchProjects(String query) {
-    // This filters the already loaded projects
-    // You can implement more advanced search if needed
+    // UI tarafında filtreleniyorsa burada sadece notify yeter
     notifyListeners();
   }
 
-  /// Create new project
+  /// Create new project (backend’e uyumlu kategori value ile gönderilecek)
   Future<bool> createProject({
     required String title,
     required String description,
@@ -102,7 +97,6 @@ class ProjectProvider with ChangeNotifier {
         supervisorId: supervisorId,
       );
 
-      // Reload projects after creation
       await loadProjects();
       await loadMyProjects();
 
@@ -117,7 +111,6 @@ class ProjectProvider with ChangeNotifier {
     }
   }
 
-  /// Request to join a project
   Future<bool> requestJoinProject(String projectId) async {
     try {
       _isLoading = true;
@@ -137,13 +130,11 @@ class ProjectProvider with ChangeNotifier {
     }
   }
 
-  /// Clear error
   void clearError() {
     _error = null;
     notifyListeners();
   }
 
-  /// Refresh all data
   Future<void> refresh() async {
     await Future.wait([
       loadProjects(),

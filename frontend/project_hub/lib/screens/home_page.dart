@@ -8,6 +8,7 @@ import 'project_detail_page.dart';
 import 'create_project_page.dart';
 import 'profile_page.dart';
 import 'messaging_page.dart';
+import 'notifications_page.dart';
 import 'professor_dashboard.dart';
 
 class HomePage extends StatefulWidget {
@@ -17,7 +18,8 @@ class HomePage extends StatefulWidget {
   State<HomePage> createState() => _HomePageState();
 }
 
-class _HomePageState extends State<HomePage> with SingleTickerProviderStateMixin {
+class _HomePageState extends State<HomePage>
+    with SingleTickerProviderStateMixin {
   int _selectedTab = 0;
   final _searchController = TextEditingController();
   late TabController _tabController;
@@ -29,7 +31,8 @@ class _HomePageState extends State<HomePage> with SingleTickerProviderStateMixin
 
     // Load projects when page initializes
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      final projectProvider = Provider.of<ProjectProvider>(context, listen: false);
+      final projectProvider =
+          Provider.of<ProjectProvider>(context, listen: false);
       projectProvider.loadProjects();
       projectProvider.loadMyProjects();
     });
@@ -46,9 +49,8 @@ class _HomePageState extends State<HomePage> with SingleTickerProviderStateMixin
   Widget build(BuildContext context) {
     final projectProvider = Provider.of<ProjectProvider>(context);
     final authProvider = Provider.of<AuthProvider>(context);
-    final projects = _selectedTab == 0 
-        ? projectProvider.projects 
-        : projectProvider.myProjects;
+    final projects =
+        _selectedTab == 0 ? projectProvider.projects : projectProvider.myProjects;
 
     return Scaffold(
       appBar: AppBar(
@@ -57,15 +59,19 @@ class _HomePageState extends State<HomePage> with SingleTickerProviderStateMixin
         actions: [
           IconButton(
             icon: const Icon(LucideIcons.bell),
+            tooltip: 'Notifications',
             onPressed: () {
-              // TODO: Navigate to notifications page
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(content: Text('Notifications coming soon!')),
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (context) => const NotificationsPage(),
+                ),
               );
             },
           ),
           IconButton(
             icon: const Icon(LucideIcons.messageSquare),
+            tooltip: 'Messages',
             onPressed: () {
               Navigator.push(
                 context,
@@ -145,13 +151,81 @@ class _HomePageState extends State<HomePage> with SingleTickerProviderStateMixin
 
           // Project List
           Expanded(
-            child: ListView.builder(
-              padding: const EdgeInsets.all(16),
-              itemCount: projects.length,
-              itemBuilder: (context, index) {
-                return _buildProjectCard(context, projects[index]);
-              },
-            ),
+            child: projectProvider.isLoading && projects.isEmpty
+                ? const Center(child: CircularProgressIndicator())
+                : projects.isEmpty
+                    ? Center(
+                        child: Padding(
+                          padding: const EdgeInsets.all(24),
+                          child: Column(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Icon(
+                                _selectedTab == 0
+                                    ? LucideIcons.search
+                                    : LucideIcons.folderOpen,
+                                size: 64,
+                                color: const Color(0xFF6B7280),
+                              ),
+                              const SizedBox(height: 16),
+                              Text(
+                                _selectedTab == 0
+                                    ? 'No projects found'
+                                    : 'You haven\'t joined any projects yet',
+                                style: const TextStyle(
+                                  fontSize: 18,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                              const SizedBox(height: 8),
+                              Text(
+                                _selectedTab == 0
+                                    ? 'Try adjusting your search or create a new project'
+                                    : 'Explore projects and join one to get started',
+                                textAlign: TextAlign.center,
+                                style: const TextStyle(
+                                  color: Color(0xFF6B7280),
+                                ),
+                              ),
+                              const SizedBox(height: 16),
+                              ElevatedButton.icon(
+                                onPressed: () {
+                                  if (_selectedTab == 0) {
+                                    projectProvider.loadProjects();
+                                  } else {
+                                    setState(() {
+                                      _tabController.animateTo(0);
+                                      _selectedTab = 0;
+                                    });
+                                  }
+                                },
+                                icon: Icon(_selectedTab == 0
+                                    ? Icons.refresh
+                                    : LucideIcons.search),
+                                label: Text(_selectedTab == 0
+                                    ? 'Refresh'
+                                    : 'Explore Projects'),
+                              ),
+                            ],
+                          ),
+                        ),
+                      )
+                    : RefreshIndicator(
+                        onRefresh: () async {
+                          if (_selectedTab == 0) {
+                            await projectProvider.loadProjects();
+                          } else {
+                            await projectProvider.loadMyProjects();
+                          }
+                        },
+                        child: ListView.builder(
+                          padding: const EdgeInsets.all(16),
+                          itemCount: projects.length,
+                          itemBuilder: (context, index) {
+                            return _buildProjectCard(context, projects[index]);
+                          },
+                        ),
+                      ),
           ),
         ],
       ),
@@ -196,16 +270,18 @@ class _HomePageState extends State<HomePage> with SingleTickerProviderStateMixin
                       children: [
                         Text(
                           project.title,
-                          style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                            fontWeight: FontWeight.bold,
-                          ),
+                          style:
+                              Theme.of(context).textTheme.titleMedium?.copyWith(
+                                    fontWeight: FontWeight.bold,
+                                  ),
                         ),
                         const SizedBox(height: 4),
                         Text(
-                          'by ${project.creator} • ${project.faculty}',
-                          style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                            color: const Color(0xFF6B7280),
-                          ),
+                          'by ${project.creator}${project.faculty.isNotEmpty ? ' • ${project.faculty}' : ''}',
+                          style:
+                              Theme.of(context).textTheme.bodySmall?.copyWith(
+                                    color: const Color(0xFF6B7280),
+                                  ),
                         ),
                       ],
                     ),
@@ -221,20 +297,21 @@ class _HomePageState extends State<HomePage> with SingleTickerProviderStateMixin
                 maxLines: 2,
                 overflow: TextOverflow.ellipsis,
                 style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                  color: const Color(0xFF6B7280),
-                ),
+                      color: const Color(0xFF6B7280),
+                    ),
               ),
               const SizedBox(height: 12),
 
               // Looking For
-              Wrap(
-                spacing: 8,
-                runSpacing: 8,
-                children: project.lookingFor
-                    .take(3)
-                    .map((role) => _buildBadge(role))
-                    .toList(),
-              ),
+              if (project.lookingFor.isNotEmpty)
+                Wrap(
+                  spacing: 8,
+                  runSpacing: 8,
+                  children: project.lookingFor
+                      .take(3)
+                      .map((role) => _buildBadge(role))
+                      .toList(),
+                ),
               const SizedBox(height: 12),
 
               // Footer
@@ -249,24 +326,25 @@ class _HomePageState extends State<HomePage> with SingleTickerProviderStateMixin
                   Text(
                     project.teamSizeDisplay,
                     style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                      color: const Color(0xFF6B7280),
-                    ),
+                          color: const Color(0xFF6B7280),
+                        ),
                   ),
                   const SizedBox(width: 16),
-                  Container(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 8,
-                      vertical: 4,
+                  if (project.category.isNotEmpty)
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 8,
+                        vertical: 4,
+                      ),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFFF3F4F6),
+                        borderRadius: BorderRadius.circular(4),
+                      ),
+                      child: Text(
+                        project.category,
+                        style: Theme.of(context).textTheme.bodySmall,
+                      ),
                     ),
-                    decoration: BoxDecoration(
-                      color: const Color(0xFFF3F4F6),
-                      borderRadius: BorderRadius.circular(4),
-                    ),
-                    child: Text(
-                      project.category,
-                      style: Theme.of(context).textTheme.bodySmall,
-                    ),
-                  ),
                 ],
               ),
             ],
@@ -280,7 +358,7 @@ class _HomePageState extends State<HomePage> with SingleTickerProviderStateMixin
     const greenColor = Color(0xFF10B981);
     const blueColor = Color(0xFF0EA5E9);
     const grayColor = Color(0xFF6B7280);
-    
+
     Color color;
     switch (status) {
       case 'Recruiting':
@@ -296,7 +374,7 @@ class _HomePageState extends State<HomePage> with SingleTickerProviderStateMixin
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
       decoration: BoxDecoration(
-        color: Color.fromRGBO(color.red, color.green, color.blue, 0.1),
+        color: color.withOpacity(0.1),
         borderRadius: BorderRadius.circular(4),
       ),
       child: Text(

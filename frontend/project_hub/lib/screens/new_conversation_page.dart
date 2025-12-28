@@ -38,22 +38,26 @@ class _NewConversationPageState extends State<NewConversationPage> {
       final students = await _userService.getAllStudents();
       final faculty = await _userService.getAllFaculty();
 
-      // Listeyi tek yerde birleştir
+      // Merge lists
       final merged = <Map<String, dynamic>>[
         ...students.map((e) => {...e, '_type': 'student'}),
         ...faculty.map((e) => {...e, '_type': 'faculty'}),
       ];
 
-      setState(() {
-        _allUsers = merged;
-        _filtered = merged;
-        _loading = false;
-      });
+      if (mounted) {
+        setState(() {
+          _allUsers = merged;
+          _filtered = merged;
+          _loading = false;
+        });
+      }
     } catch (e) {
-      setState(() {
-        _error = e.toString();
-        _loading = false;
-      });
+      if (mounted) {
+        setState(() {
+          _error = e.toString();
+          _loading = false;
+        });
+      }
     }
   }
 
@@ -66,25 +70,67 @@ class _NewConversationPageState extends State<NewConversationPage> {
 
     setState(() {
       _filtered = _allUsers.where((u) {
-        final name = (u['name'] ?? u['user']?['name'] ?? '').toString().toLowerCase();
-        final email = (u['email'] ?? u['user']?['email'] ?? '').toString().toLowerCase();
+        final name = _displayName(u).toLowerCase();
+        final email = _displayEmail(u).toLowerCase();
         return name.contains(q) || email.contains(q);
       }).toList();
     });
   }
 
   String _displayName(Map<String, dynamic> u) {
-    return (u['name'] ?? u['user']?['name'] ?? 'Unknown').toString();
+    // Try multiple possible name locations
+    String name = '';
+    
+    // Check nested user object first
+    if (u['user'] is Map) {
+      name = (u['user']['name'] ?? '').toString().trim();
+    }
+    
+    // If still empty, check direct name field
+    if (name.isEmpty) {
+      name = (u['name'] ?? '').toString().trim();
+    }
+    
+    // If still empty, try email
+    if (name.isEmpty) {
+      name = _displayEmail(u);
+    }
+    
+    // Last resort
+    if (name.isEmpty) {
+      name = 'User ${u['id'] ?? 'Unknown'}';
+    }
+    
+    return name;
   }
 
   String _displayEmail(Map<String, dynamic> u) {
-    return (u['email'] ?? u['user']?['email'] ?? '').toString();
+    // Check nested user object first
+    if (u['user'] is Map) {
+      final email = (u['user']['email'] ?? '').toString().trim();
+      if (email.isNotEmpty) return email;
+    }
+    
+    // Check direct email field
+    return (u['email'] ?? '').toString().trim();
   }
 
   String _userId(Map<String, dynamic> u) {
-    // Backend’te bazen profile objesi içinde user var, bazen direkt user id var.
-    final id = u['id'] ?? u['user']?['id'];
+    // Backend sometimes has nested user object, sometimes direct id
+    // For conversation creation, we need the actual user ID
+    
+    // Check if there's a nested user object with ID
+    if (u['user'] is Map && u['user']['id'] != null) {
+      return u['user']['id'].toString();
+    }
+    
+    // Otherwise use the profile ID (which should link to user)
+    final id = u['id'];
     return id?.toString() ?? '';
+  }
+
+  String _userType(Map<String, dynamic> u) {
+    return (u['_type'] ?? 'student').toString();
   }
 
   @override
@@ -107,7 +153,25 @@ class _NewConversationPageState extends State<NewConversationPage> {
               ? Center(
                   child: Padding(
                     padding: const EdgeInsets.all(16),
-                    child: Text(_error!, textAlign: TextAlign.center),
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        const Icon(Icons.error_outline, size: 48, color: Colors.red),
+                        const SizedBox(height: 16),
+                        Text(
+                          'Failed to load users',
+                          style: Theme.of(context).textTheme.titleMedium,
+                        ),
+                        const SizedBox(height: 8),
+                        Text(_error!, textAlign: TextAlign.center),
+                        const SizedBox(height: 16),
+                        ElevatedButton.icon(
+                          onPressed: _loadUsers,
+                          icon: const Icon(Icons.refresh),
+                          label: const Text('Retry'),
+                        ),
+                      ],
+                    ),
                   ),
                 )
               : Column(
@@ -125,39 +189,106 @@ class _NewConversationPageState extends State<NewConversationPage> {
                     ),
                     Expanded(
                       child: _filtered.isEmpty
-                          ? const Center(child: Text('No users found.'))
+                          ? Center(
+                              child: Column(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  const Icon(Icons.person_search, size: 48),
+                                  const SizedBox(height: 16),
+                                  const Text('No users found'),
+                                  if (_searchCtrl.text.isNotEmpty) ...[
+                                    const SizedBox(height: 8),
+                                    TextButton(
+                                      onPressed: () {
+                                        _searchCtrl.clear();
+                                        _applyFilter();
+                                      },
+                                      child: const Text('Clear search'),
+                                    ),
+                                  ],
+                                ],
+                              ),
+                            )
                           : ListView.separated(
                               itemCount: _filtered.length,
-                              separatorBuilder: (_, __) => const Divider(height: 1),
+                              separatorBuilder: (_, __) =>
+                                  const Divider(height: 1),
                               itemBuilder: (context, index) {
                                 final u = _filtered[index];
                                 final name = _displayName(u);
                                 final email = _displayEmail(u);
                                 final id = _userId(u);
+                                final type = _userType(u);
 
                                 return ListTile(
+                                  leading: CircleAvatar(
+                                    backgroundColor: type == 'faculty'
+                                        ? const Color(0xFF10B981)
+                                        : const Color(0xFF0EA5E9),
+                                    child: Text(
+                                      name.isNotEmpty ? name[0].toUpperCase() : '?',
+                                      style: const TextStyle(color: Colors.white),
+                                    ),
+                                  ),
                                   title: Text(name),
-                                  subtitle: Text(email.isNotEmpty ? email : 'User ID: $id'),
+                                  subtitle: Column(
+                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    children: [
+                                      if (email.isNotEmpty)
+                                        Text(
+                                          email,
+                                          style: const TextStyle(fontSize: 12),
+                                        ),
+                                      Text(
+                                        type == 'faculty' ? 'Faculty' : 'Student',
+                                        style: TextStyle(
+                                          fontSize: 11,
+                                          color: type == 'faculty'
+                                              ? const Color(0xFF10B981)
+                                              : const Color(0xFF0EA5E9),
+                                        ),
+                                      ),
+                                    ],
+                                  ),
                                   trailing: const Icon(Icons.chevron_right),
                                   onTap: id.isEmpty
                                       ? null
                                       : () async {
-                                          final conv = await messageProvider.createConversation(
+                                          // Capture context before async gap
+                                          final navigator = Navigator.of(context);
+                                          final messenger = ScaffoldMessenger.of(context);
+                                          
+                                          // Show loading
+                                          showDialog(
+                                            context: context,
+                                            barrierDismissible: false,
+                                            builder: (context) => const Center(
+                                              child: CircularProgressIndicator(),
+                                            ),
+                                          );
+
+                                          final conv = await messageProvider
+                                              .createConversation(
                                             participantIds: [id],
                                             isGroup: false,
-                                            name: name, // backend ignore etse bile UI için güzel
+                                            name: name,
                                           );
 
                                           if (!mounted) return;
 
+                                          // Close loading dialog
+                                          navigator.pop();
+
                                           if (conv != null) {
-                                            Navigator.pop(context, conv);
+                                            navigator.pop(conv);
                                           } else {
-                                            ScaffoldMessenger.of(context).showSnackBar(
+                                            messenger.showSnackBar(
                                               SnackBar(
                                                 content: Text(
-                                                  messageProvider.error ?? 'Failed to create conversation',
+                                                  messageProvider.error ??
+                                                      'Failed to create conversation',
                                                 ),
+                                                backgroundColor: Colors.red,
                                               ),
                                             );
                                           }

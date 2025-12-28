@@ -3,6 +3,7 @@ import 'package:provider/provider.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 
 import '../providers/message_provider.dart';
+import '../providers/auth_provider.dart';
 import '../models/message.dart';
 import 'new_conversation_page.dart';
 
@@ -16,6 +17,7 @@ class MessagingPage extends StatefulWidget {
 class _MessagingPageState extends State<MessagingPage> {
   Conversation? _selectedConversation;
   final _messageController = TextEditingController();
+  final _scrollController = ScrollController();
 
   @override
   void initState() {
@@ -35,7 +37,8 @@ class _MessagingPageState extends State<MessagingPage> {
     final isTablet = size.width > 600;
 
     // Optional: show error as a small banner/snackbar-like bar
-    final errorWidget = (messageProvider.error != null && messageProvider.error!.isNotEmpty)
+    final errorWidget = (messageProvider.error != null &&
+            messageProvider.error!.isNotEmpty)
         ? Container(
             width: double.infinity,
             padding: const EdgeInsets.all(12),
@@ -65,6 +68,28 @@ class _MessagingPageState extends State<MessagingPage> {
         appBar: AppBar(
           title: const Text('Messages'),
           actions: [
+            IconButton(
+              tooltip: 'New conversation',
+              icon: const Icon(Icons.add),
+              onPressed: () async {
+                final createdConversation = await Navigator.push<Conversation?>(
+                  context,
+                  MaterialPageRoute(builder: (_) => const NewConversationPage()),
+                );
+
+                if (!mounted) return;
+
+                if (createdConversation != null) {
+                  setState(() => _selectedConversation = createdConversation);
+                  await messageProvider.loadMessages(createdConversation.id);
+
+                  if (!mounted) return;
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(content: Text('Conversation started: ${createdConversation.name}')),
+                  );
+                }
+              },
+            ),
             IconButton(
               tooltip: 'Refresh',
               icon: const Icon(Icons.refresh),
@@ -97,7 +122,6 @@ class _MessagingPageState extends State<MessagingPage> {
             ),
           ],
         ),
-        floatingActionButton: _buildNewConversationFab(messageProvider),
       );
     }
 
@@ -107,6 +131,28 @@ class _MessagingPageState extends State<MessagingPage> {
         appBar: AppBar(
           title: const Text('Messages'),
           actions: [
+            IconButton(
+              tooltip: 'New conversation',
+              icon: const Icon(Icons.add),
+              onPressed: () async {
+                final createdConversation = await Navigator.push<Conversation?>(
+                  context,
+                  MaterialPageRoute(builder: (_) => const NewConversationPage()),
+                );
+
+                if (!mounted) return;
+
+                if (createdConversation != null) {
+                  setState(() => _selectedConversation = createdConversation);
+                  await messageProvider.loadMessages(createdConversation.id);
+
+                  if (!mounted) return;
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(content: Text('Conversation started: ${createdConversation.name}')),
+                  );
+                }
+              },
+            ),
             IconButton(
               tooltip: 'Refresh',
               icon: const Icon(Icons.refresh),
@@ -122,7 +168,6 @@ class _MessagingPageState extends State<MessagingPage> {
             Expanded(child: _buildConversationList(messageProvider)),
           ],
         ),
-        floatingActionButton: _buildNewConversationFab(messageProvider),
       );
     }
 
@@ -137,7 +182,9 @@ class _MessagingPageState extends State<MessagingPage> {
           leading: CircleAvatar(
             backgroundColor: const Color(0xFF0EA5E9),
             child: Text(
-              (_selectedConversation!.name.isNotEmpty ? _selectedConversation!.name[0] : '?'),
+              (_selectedConversation!.name.isNotEmpty
+                  ? _selectedConversation!.name[0]
+                  : '?'),
               style: const TextStyle(color: Colors.white),
             ),
           ),
@@ -169,34 +216,6 @@ class _MessagingPageState extends State<MessagingPage> {
           Expanded(child: _buildChatView(messageProvider, _selectedConversation!)),
         ],
       ),
-    );
-  }
-
-  FloatingActionButton _buildNewConversationFab(MessageProvider messageProvider) {
-    return FloatingActionButton(
-      onPressed: () async {
-        final createdConversation = await Navigator.push<Conversation?>(
-          context,
-          MaterialPageRoute(builder: (_) => const NewConversationPage()),
-        );
-
-        if (!mounted) return;
-
-        if (createdConversation != null) {
-          setState(() => _selectedConversation = createdConversation);
-
-          // load messages so it isn't empty
-          await messageProvider.loadMessages(createdConversation.id);
-
-          if (!mounted) return;
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text('Conversation started: ${createdConversation.name}')),
-          );
-        } else {
-          // if nothing created, do nothing
-        }
-      },
-      child: const Icon(LucideIcons.plus),
     );
   }
 
@@ -272,9 +291,13 @@ class _MessagingPageState extends State<MessagingPage> {
             title: Text(
               conversation.name,
               style: const TextStyle(fontWeight: FontWeight.w500),
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
             ),
             subtitle: Text(
-              conversation.lastMessage,
+              conversation.lastMessage.isEmpty
+                  ? 'No messages yet'
+                  : conversation.lastMessage,
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
             ),
@@ -282,12 +305,13 @@ class _MessagingPageState extends State<MessagingPage> {
               mainAxisAlignment: MainAxisAlignment.center,
               crossAxisAlignment: CrossAxisAlignment.end,
               children: [
-                Text(
-                  conversation.lastMessageTime,
-                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                        color: const Color(0xFF6B7280),
-                      ),
-                ),
+                if (conversation.lastMessageTime.isNotEmpty)
+                  Text(
+                    conversation.lastMessageTime,
+                    style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                          color: const Color(0xFF6B7280),
+                        ),
+                  ),
                 if (conversation.unreadCount > 0) ...[
                   const SizedBox(height: 4),
                   Container(
@@ -313,6 +337,11 @@ class _MessagingPageState extends State<MessagingPage> {
 
               // IMPORTANT: load messages from API so chat isn't empty
               await messageProvider.loadMessages(conversation.id);
+
+              // Scroll to bottom after loading
+              if (mounted && _scrollController.hasClients) {
+                _scrollController.jumpTo(0);
+              }
             },
           );
         },
@@ -320,8 +349,11 @@ class _MessagingPageState extends State<MessagingPage> {
     );
   }
 
-  Widget _buildChatView(MessageProvider messageProvider, Conversation conversation) {
+  Widget _buildChatView(
+      MessageProvider messageProvider, Conversation conversation) {
     final messages = messageProvider.getMessages(conversation.id);
+    final authProvider = context.read<AuthProvider>();
+    final currentUserId = authProvider.currentUser?.id;
 
     return Column(
       children: [
@@ -329,14 +361,20 @@ class _MessagingPageState extends State<MessagingPage> {
           child: messageProvider.isLoading && messages.isEmpty
               ? const Center(child: CircularProgressIndicator())
               : messages.isEmpty
-                  ? const Center(child: Text('No messages yet.'))
+                  ? const Center(
+                      child: Text(
+                        'No messages yet.\nSend a message to start the conversation!',
+                        textAlign: TextAlign.center,
+                      ),
+                    )
                   : ListView.builder(
+                      controller: _scrollController,
                       padding: const EdgeInsets.all(16),
                       reverse: true,
                       itemCount: messages.length,
                       itemBuilder: (context, index) {
                         final message = messages[messages.length - 1 - index];
-                        return _buildMessageBubble(message);
+                        return _buildMessageBubble(message, currentUserId);
                       },
                     ),
         ),
@@ -348,52 +386,86 @@ class _MessagingPageState extends State<MessagingPage> {
             color: Colors.white,
             border: Border(top: BorderSide(color: Color(0xFFE5E7EB))),
           ),
-          child: Row(
-            children: [
-              IconButton(
-                icon: const Icon(LucideIcons.paperclip),
-                onPressed: () {},
-              ),
-              Expanded(
-                child: TextField(
-                  controller: _messageController,
-                  decoration: const InputDecoration(
-                    hintText: 'Type a message...',
-                    border: OutlineInputBorder(),
+          child: SafeArea(
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.end,
+              children: [
+                Expanded(
+                  child: Container(
+                    constraints: const BoxConstraints(maxHeight: 150),
+                    child: TextField(
+                      controller: _messageController,
+                      decoration: const InputDecoration(
+                        hintText: 'Type a message...',
+                        border: OutlineInputBorder(),
+                        contentPadding: EdgeInsets.symmetric(
+                          horizontal: 16,
+                          vertical: 12,
+                        ),
+                      ),
+                      maxLines: null,
+                      textInputAction: TextInputAction.newline,
+                    ),
                   ),
-                  maxLines: null,
                 ),
-              ),
-              const SizedBox(width: 8),
-              IconButton(
-                icon: const Icon(LucideIcons.send),
-                onPressed: () async {
-                  final text = _messageController.text.trim();
-                  if (text.isEmpty) return;
+                const SizedBox(width: 8),
+                Container(
+                  decoration: const BoxDecoration(
+                    color: Color(0xFF0EA5E9),
+                    shape: BoxShape.circle,
+                  ),
+                  child: IconButton(
+                    icon: const Icon(LucideIcons.send, color: Colors.white),
+                    onPressed: () async {
+                      final text = _messageController.text.trim();
+                      if (text.isEmpty) return;
 
-                  final ok = await messageProvider.sendMessage(conversation.id, text);
+                      // Clear immediately for better UX
+                      _messageController.clear();
 
-                  if (!mounted) return;
+                      final ok =
+                          await messageProvider.sendMessage(conversation.id, text);
 
-                  if (ok) {
-                    _messageController.clear();
-                  } else {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(content: Text(messageProvider.error ?? 'Failed to send message')),
-                    );
-                  }
-                },
-              ),
-            ],
+                      if (!mounted) return;
+
+                      if (ok) {
+                        // Scroll to bottom after sending
+                        if (_scrollController.hasClients) {
+                          _scrollController.animateTo(
+                            0,
+                            duration: const Duration(milliseconds: 300),
+                            curve: Curves.easeOut,
+                          );
+                        }
+                      } else {
+                        // Show error
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(
+                            content: Text(messageProvider.error ??
+                                'Failed to send message'),
+                            backgroundColor: Colors.red,
+                          ),
+                        );
+                        // Restore text if failed
+                        _messageController.text = text;
+                      }
+                    },
+                  ),
+                ),
+              ],
+            ),
           ),
         ),
       ],
     );
   }
 
-  Widget _buildMessageBubble(Message message) {
+  Widget _buildMessageBubble(Message message, String? currentUserId) {
+    // Determine if message is from current user
+    final isOwn = message.isOwn;
+
     return Align(
-      alignment: message.isOwn ? Alignment.centerRight : Alignment.centerLeft,
+      alignment: isOwn ? Alignment.centerRight : Alignment.centerLeft,
       child: Container(
         margin: const EdgeInsets.only(bottom: 12),
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
@@ -401,13 +473,13 @@ class _MessagingPageState extends State<MessagingPage> {
           maxWidth: MediaQuery.of(context).size.width * 0.7,
         ),
         decoration: BoxDecoration(
-          color: message.isOwn ? const Color(0xFF0EA5E9) : const Color(0xFFF3F4F6),
+          color: isOwn ? const Color(0xFF0EA5E9) : const Color(0xFFF3F4F6),
           borderRadius: BorderRadius.circular(12),
         ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            if (!message.isOwn) ...[
+            if (!isOwn && message.sender.isNotEmpty) ...[
               Text(
                 message.sender,
                 style: const TextStyle(
@@ -420,7 +492,7 @@ class _MessagingPageState extends State<MessagingPage> {
             Text(
               message.content,
               style: TextStyle(
-                color: message.isOwn ? Colors.white : const Color(0xFF111827),
+                color: isOwn ? Colors.white : const Color(0xFF111827),
               ),
             ),
             const SizedBox(height: 4),
@@ -428,7 +500,7 @@ class _MessagingPageState extends State<MessagingPage> {
               message.time,
               style: TextStyle(
                 fontSize: 10,
-                color: message.isOwn
+                color: isOwn
                     ? const Color.fromRGBO(255, 255, 255, 0.7)
                     : const Color(0xFF6B7280),
               ),
@@ -442,6 +514,7 @@ class _MessagingPageState extends State<MessagingPage> {
   @override
   void dispose() {
     _messageController.dispose();
+    _scrollController.dispose();
     super.dispose();
   }
 }
