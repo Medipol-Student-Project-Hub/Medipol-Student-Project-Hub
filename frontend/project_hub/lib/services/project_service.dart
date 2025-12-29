@@ -66,31 +66,58 @@ class ProjectService {
     String? duration,
     List<String>? requirements,
     List<String>? objectives,
-    String? supervisorId,
+    String? supervisorName,
   }) async {
     try {
+      // Build request data
+      final Map<String, dynamic> requestData = {
+        'title': title,
+        'description': description,
+        'category': category,
+        'tags': lookingFor,
+      };
+
+      // Add optional fields only if they have values
+      if (maxTeamSize != null && maxTeamSize > 0) {
+        requestData['max_team_size'] = maxTeamSize;
+      }
+      
+      if (startDate != null && startDate.isNotEmpty) {
+        requestData['start_date'] = startDate;
+      }
+      
+      if (duration != null && duration.isNotEmpty) {
+        requestData['expected_duration'] = duration;
+      }
+      
+      if (requirements != null && requirements.isNotEmpty) {
+        requestData['required_skills'] = requirements;
+      }
+      
+      if (objectives != null && objectives.isNotEmpty) {
+        requestData['objectives'] = objectives;
+      }
+      
+      // Supervisor name as string (not ID)
+      if (supervisorName != null && supervisorName.isNotEmpty) {
+        requestData['supervisor_name'] = supervisorName;
+      }
+
+      print('Creating project with data: $requestData');
+
       final response = await _apiClient.post(
         ApiConfig.projectsEndpoint,
-        data: {
-          'title': title,
-          'description': description,
-          'category': category,
-          'tags': lookingFor,
-          if (maxTeamSize != null) 'max_team_size': maxTeamSize,
-          if (startDate != null) 'start_date': startDate,
-          if (duration != null) 'expected_duration': duration,
-          if (requirements != null) 'required_skills': requirements,
-          if (objectives != null) 'objectives': objectives,
-          if (supervisorId != null) 'supervisor': supervisorId,
-        },
+        data: requestData,
       );
 
-      if (response.statusCode == 201) {
+      if (response.statusCode == 201 || response.statusCode == 200) {
+        print('Project created successfully: ${response.data}');
         return Project.fromJson(response.data);
       } else {
-        throw Exception('Failed to create project');
+        throw Exception('Failed to create project: ${response.statusCode}');
       }
     } on DioException catch (e) {
+      print('Error creating project: ${e.response?.data}');
       throw _handleError(e);
     }
   }
@@ -148,9 +175,9 @@ class ProjectService {
       final data = error.response!.data;
       if (data is Map) {
         if (data.containsKey('detail')) {
-          return data['detail'];
+          return data['detail'].toString();
         } else if (data.containsKey('error')) {
-          return data['error'];
+          return data['error'].toString();
         } else {
           for (var value in data.values) {
             if (value is String) return value;

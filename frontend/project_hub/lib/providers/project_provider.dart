@@ -5,13 +5,17 @@ import '../services/project_service.dart';
 class ProjectProvider with ChangeNotifier {
   final ProjectService _projectService = ProjectService();
 
-  List<Project> _projects = [];
-  List<Project> _myProjects = [];
+  List<Project> _allProjects = [];
+  List<Project> _allMyProjects = [];
+  List<Project> _filteredProjects = [];
+  List<Project> _filteredMyProjects = [];
+  
   bool _isLoading = false;
   String? _error;
+  String _searchQuery = '';
 
-  List<Project> get projects => _projects;
-  List<Project> get myProjects => _myProjects;
+  List<Project> get projects => _searchQuery.isEmpty ? _allProjects : _filteredProjects;
+  List<Project> get myProjects => _searchQuery.isEmpty ? _allMyProjects : _filteredMyProjects;
   bool get isLoading => _isLoading;
   String? get error => _error;
 
@@ -21,14 +25,16 @@ class ProjectProvider with ChangeNotifier {
       _error = null;
       notifyListeners();
 
-      _projects = await _projectService.getAllProjects();
+      _allProjects = await _projectService.getAllProjects();
+      _applySearch();
 
       _isLoading = false;
       notifyListeners();
     } catch (e) {
       _error = e.toString();
       _isLoading = false;
-      _projects = [];
+      _allProjects = [];
+      _filteredProjects = [];
       notifyListeners();
     }
   }
@@ -39,14 +45,16 @@ class ProjectProvider with ChangeNotifier {
       _error = null;
       notifyListeners();
 
-      _myProjects = await _projectService.getMyProjects();
+      _allMyProjects = await _projectService.getMyProjects();
+      _applySearch();
 
       _isLoading = false;
       notifyListeners();
     } catch (e) {
       _error = e.toString();
       _isLoading = false;
-      _myProjects = [];
+      _allMyProjects = [];
+      _filteredMyProjects = [];
       notifyListeners();
     }
   }
@@ -62,11 +70,35 @@ class ProjectProvider with ChangeNotifier {
   }
 
   void searchProjects(String query) {
-    // UI tarafında filtreleniyorsa burada sadece notify yeter
+    _searchQuery = query.toLowerCase().trim();
+    _applySearch();
     notifyListeners();
   }
 
-  /// Create new project (backend’e uyumlu kategori value ile gönderilecek)
+  void _applySearch() {
+    if (_searchQuery.isEmpty) {
+      _filteredProjects = _allProjects;
+      _filteredMyProjects = _allMyProjects;
+      return;
+    }
+
+    _filteredProjects = _allProjects.where((project) {
+      return project.title.toLowerCase().contains(_searchQuery) ||
+          project.description.toLowerCase().contains(_searchQuery) ||
+          project.category.toLowerCase().contains(_searchQuery) ||
+          project.creator.toLowerCase().contains(_searchQuery) ||
+          project.lookingFor.any((role) => role.toLowerCase().contains(_searchQuery));
+    }).toList();
+
+    _filteredMyProjects = _allMyProjects.where((project) {
+      return project.title.toLowerCase().contains(_searchQuery) ||
+          project.description.toLowerCase().contains(_searchQuery) ||
+          project.category.toLowerCase().contains(_searchQuery) ||
+          project.creator.toLowerCase().contains(_searchQuery) ||
+          project.lookingFor.any((role) => role.toLowerCase().contains(_searchQuery));
+    }).toList();
+  }
+
   Future<bool> createProject({
     required String title,
     required String description,
@@ -77,7 +109,7 @@ class ProjectProvider with ChangeNotifier {
     String? duration,
     List<String>? requirements,
     List<String>? objectives,
-    String? supervisorId,
+    String? supervisorName,
   }) async {
     try {
       _isLoading = true;
@@ -94,8 +126,30 @@ class ProjectProvider with ChangeNotifier {
         duration: duration,
         requirements: requirements,
         objectives: objectives,
-        supervisorId: supervisorId,
+        supervisorName: supervisorName,
       );
+
+      await loadProjects();
+      await loadMyProjects();
+
+      _isLoading = false;
+      notifyListeners();
+      return true;
+    } catch (e) {
+      _error = e.toString();
+      _isLoading = false;
+      notifyListeners();
+      return false;
+    }
+  }
+
+  Future<bool> updateProject(String projectId, Map<String, dynamic> data) async {
+    try {
+      _isLoading = true;
+      _error = null;
+      notifyListeners();
+
+      await _projectService.updateProject(projectId, data);
 
       await loadProjects();
       await loadMyProjects();

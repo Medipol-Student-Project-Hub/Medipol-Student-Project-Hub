@@ -3,23 +3,26 @@ import 'package:provider/provider.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 
 import '../providers/project_provider.dart';
+import '../models/project.dart';
 
-class CreateProjectPage extends StatefulWidget {
-  const CreateProjectPage({super.key});
+class EditProjectPage extends StatefulWidget {
+  final Project project;
+
+  const EditProjectPage({super.key, required this.project});
 
   @override
-  State<CreateProjectPage> createState() => _CreateProjectPageState();
+  State<EditProjectPage> createState() => _EditProjectPageState();
 }
 
-class _CreateProjectPageState extends State<CreateProjectPage> {
+class _EditProjectPageState extends State<EditProjectPage> {
   final _formKey = GlobalKey<FormState>();
-  final _titleController = TextEditingController();
-  final _descriptionController = TextEditingController();
-  final _teamSizeController = TextEditingController();
-  final _durationController = TextEditingController();
-  final _supervisorController = TextEditingController();
+  late final TextEditingController _titleController;
+  late final TextEditingController _descriptionController;
+  late final TextEditingController _teamSizeController;
+  late final TextEditingController _durationController;
+  late final TextEditingController _supervisorController;
+  late final TextEditingController _progressController;
 
-  // ✅ Backend expects VALUES, not labels
   final List<Map<String, String>> _categories = const [
     {'label': 'Engineering', 'value': 'engineering'},
     {'label': 'Design', 'value': 'design'},
@@ -32,30 +35,51 @@ class _CreateProjectPageState extends State<CreateProjectPage> {
     {'label': 'Other', 'value': 'other'},
   ];
 
-  String _selectedCategoryValue = 'engineering'; // ✅ Default value
+  late String _selectedCategoryValue;
   DateTime? _startDate;
 
-  final List<String> _roles = [];
-  final List<String> _skills = [];
+  late List<String> _roles;
+  late List<String> _skills;
   final _roleController = TextEditingController();
   final _skillController = TextEditingController();
 
   @override
   void initState() {
     super.initState();
+    
+    // Initialize controllers with current project data
+    _titleController = TextEditingController(text: widget.project.title);
+    _descriptionController = TextEditingController(text: widget.project.description);
+    _teamSizeController = TextEditingController(text: widget.project.maxTeamSize.toString());
+    _durationController = TextEditingController(text: widget.project.duration);
+    _supervisorController = TextEditingController(text: widget.project.supervisor ?? '');
+    _progressController = TextEditingController(text: widget.project.progress.toString());
+    
+    _selectedCategoryValue = widget.project.category.isNotEmpty ? widget.project.category : 'engineering';
+    _roles = List.from(widget.project.lookingFor);
+    _skills = List.from(widget.project.requirements);
+    
+    // Parse start date if exists
+    if (widget.project.startDate.isNotEmpty) {
+      try {
+        _startDate = DateTime.parse(widget.project.startDate);
+      } catch (e) {
+        _startDate = null;
+      }
+    }
   }
 
   String _formatDateOnly(DateTime d) {
     final mm = d.month.toString().padLeft(2, '0');
     final dd = d.day.toString().padLeft(2, '0');
-    return '${d.year}-$mm-$dd'; // ✅ Django DateField friendly
+    return '${d.year}-$mm-$dd';
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Create New Project'),
+        title: const Text('Edit Project'),
       ),
       body: Form(
         key: _formKey,
@@ -111,6 +135,28 @@ class _CreateProjectPageState extends State<CreateProjectPage> {
               ),
 
               const SizedBox(height: 32),
+              _buildSectionTitle('Project Progress'),
+              const SizedBox(height: 16),
+
+              TextFormField(
+                controller: _progressController,
+                decoration: const InputDecoration(
+                  labelText: 'Progress (%)',
+                  hintText: '0-100',
+                  border: OutlineInputBorder(),
+                ),
+                keyboardType: TextInputType.number,
+                validator: (v) {
+                  if (v == null || v.isEmpty) return null;
+                  final val = int.tryParse(v);
+                  if (val == null || val < 0 || val > 100) {
+                    return 'Enter a value between 0 and 100';
+                  }
+                  return null;
+                },
+              ),
+
+              const SizedBox(height: 32),
               _buildSectionTitle('Timeline'),
               const SizedBox(height: 16),
 
@@ -126,7 +172,7 @@ class _CreateProjectPageState extends State<CreateProjectPage> {
                 onTap: () async {
                   final date = await showDatePicker(
                     context: context,
-                    initialDate: DateTime.now(),
+                    initialDate: _startDate ?? DateTime.now(),
                     firstDate: DateTime(2020),
                     lastDate: DateTime(2030),
                   );
@@ -203,7 +249,6 @@ class _CreateProjectPageState extends State<CreateProjectPage> {
                   labelText: 'Supervisor Name',
                   hintText: 'e.g., Prof. Dr. John Smith',
                   border: OutlineInputBorder(),
-                  helperText: 'Enter the name of your project supervisor',
                 ),
               ),
 
@@ -214,7 +259,7 @@ class _CreateProjectPageState extends State<CreateProjectPage> {
                   onPressed: _submitForm,
                   style: ElevatedButton.styleFrom(
                       padding: const EdgeInsets.symmetric(vertical: 16)),
-                  child: const Text('Create Project'),
+                  child: const Text('Save Changes'),
                 ),
               ),
             ],
@@ -251,7 +296,8 @@ class _CreateProjectPageState extends State<CreateProjectPage> {
             labelText: label,
             hintText: hint,
             border: const OutlineInputBorder(),
-            suffixIcon: IconButton(icon: const Icon(LucideIcons.plus), onPressed: onAdd),
+            suffixIcon: IconButton(
+                icon: const Icon(LucideIcons.plus), onPressed: onAdd),
           ),
           onSubmitted: (_) => onAdd(),
         ),
@@ -280,31 +326,50 @@ class _CreateProjectPageState extends State<CreateProjectPage> {
     final provider = Provider.of<ProjectProvider>(context, listen: false);
 
     final supervisorName = _supervisorController.text.trim();
+    final progress = int.tryParse(_progressController.text) ?? widget.project.progress;
 
-    final success = await provider.createProject(
-      title: _titleController.text.trim(),
-      description: _descriptionController.text.trim(),
-      category: _selectedCategoryValue,
-      lookingFor: _roles,
-      maxTeamSize: int.tryParse(_teamSizeController.text),
-      startDate: _startDate == null ? null : _formatDateOnly(_startDate!),
-      duration: _durationController.text.trim(),
-      requirements: _skills,
-      objectives: const [],
-      supervisorName: supervisorName.isEmpty ? null : supervisorName,
-    );
+    // Build update data
+    final Map<String, dynamic> updateData = {
+      'title': _titleController.text.trim(),
+      'description': _descriptionController.text.trim(),
+      'category': _selectedCategoryValue,
+      'tags': _roles,
+      'progress': progress,
+    };
+
+    if (_teamSizeController.text.isNotEmpty) {
+      updateData['max_team_size'] = int.tryParse(_teamSizeController.text);
+    }
+    
+    if (_startDate != null) {
+      updateData['start_date'] = _formatDateOnly(_startDate!);
+    }
+    
+    if (_durationController.text.trim().isNotEmpty) {
+      updateData['expected_duration'] = _durationController.text.trim();
+    }
+    
+    if (_skills.isNotEmpty) {
+      updateData['required_skills'] = _skills;
+    }
+    
+    if (supervisorName.isNotEmpty) {
+      updateData['supervisor_name'] = supervisorName;
+    }
+
+    final success = await provider.updateProject(widget.project.id, updateData);
 
     if (!mounted) return;
 
     if (success) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Project created successfully!')),
+        const SnackBar(content: Text('Project updated successfully!')),
       );
-      Navigator.pop(context);
+      Navigator.pop(context, true);
     } else {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text(provider.error ?? 'Failed to create project'),
+          content: Text(provider.error ?? 'Failed to update project'),
           backgroundColor: Colors.red,
         ),
       );
@@ -318,6 +383,7 @@ class _CreateProjectPageState extends State<CreateProjectPage> {
     _teamSizeController.dispose();
     _durationController.dispose();
     _supervisorController.dispose();
+    _progressController.dispose();
     _roleController.dispose();
     _skillController.dispose();
     super.dispose();

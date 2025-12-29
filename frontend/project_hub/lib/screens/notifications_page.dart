@@ -30,7 +30,7 @@ class NotificationsPage extends StatelessWidget {
               ),
               const SizedBox(height: 24),
               const Text(
-                'Welcome to Medipol Project Hub! 🎉',
+                'Welcome to Medipol Project Hub! ',
                 style: TextStyle(
                   fontSize: 24,
                   fontWeight: FontWeight.bold,

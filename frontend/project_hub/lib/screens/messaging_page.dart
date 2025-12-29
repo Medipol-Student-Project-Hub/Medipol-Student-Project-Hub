@@ -23,11 +23,19 @@ class _MessagingPageState extends State<MessagingPage> {
   void initState() {
     super.initState();
 
-    // Load conversations once after first frame
     WidgetsBinding.instance.addPostFrameCallback((_) async {
       final provider = context.read<MessageProvider>();
       await provider.loadConversations();
     });
+  }
+
+  String _getInitials(String name) {
+    if (name.isEmpty) return '?';
+    final parts = name.trim().split(' ');
+    if (parts.length == 1) {
+      return parts[0].substring(0, 1).toUpperCase();
+    }
+    return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
   }
 
   @override
@@ -36,7 +44,6 @@ class _MessagingPageState extends State<MessagingPage> {
     final size = MediaQuery.of(context).size;
     final isTablet = size.width > 600;
 
-    // Optional: show error as a small banner/snackbar-like bar
     final errorWidget = (messageProvider.error != null &&
             messageProvider.error!.isNotEmpty)
         ? Container(
@@ -85,7 +92,7 @@ class _MessagingPageState extends State<MessagingPage> {
 
                   if (!mounted) return;
                   ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(content: Text('Conversation started: ${createdConversation.name}')),
+                    SnackBar(content: Text('Conversation started with ${createdConversation.name}')),
                   );
                 }
               },
@@ -148,7 +155,7 @@ class _MessagingPageState extends State<MessagingPage> {
 
                   if (!mounted) return;
                   ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(content: Text('Conversation started: ${createdConversation.name}')),
+                    SnackBar(content: Text('Conversation started with ${createdConversation.name}')),
                   );
                 }
               },
@@ -182,15 +189,22 @@ class _MessagingPageState extends State<MessagingPage> {
           leading: CircleAvatar(
             backgroundColor: const Color(0xFF0EA5E9),
             child: Text(
-              (_selectedConversation!.name.isNotEmpty
-                  ? _selectedConversation!.name[0]
-                  : '?'),
-              style: const TextStyle(color: Colors.white),
+              _getInitials(_selectedConversation!.name),
+              style: const TextStyle(
+                color: Colors.white,
+                fontWeight: FontWeight.bold,
+                fontSize: 16,
+              ),
             ),
           ),
           title: Text(
             _selectedConversation!.name,
-            style: const TextStyle(fontSize: 16),
+            style: const TextStyle(
+              fontSize: 16,
+              fontWeight: FontWeight.w600,
+            ),
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
           ),
           subtitle: _selectedConversation!.isOnline
               ? const Text(
@@ -231,16 +245,20 @@ class _MessagingPageState extends State<MessagingPage> {
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              const Icon(LucideIcons.messagesSquare, size: 40),
-              const SizedBox(height: 12),
+              const Icon(LucideIcons.messagesSquare, size: 48, color: Color(0xFF6B7280)),
+              const SizedBox(height: 16),
               const Text(
-                'No conversations yet.',
-                style: TextStyle(fontWeight: FontWeight.w600),
+                'No conversations yet',
+                style: TextStyle(
+                  fontWeight: FontWeight.w600,
+                  fontSize: 18,
+                ),
               ),
-              const SizedBox(height: 6),
+              const SizedBox(height: 8),
               const Text(
-                'Tap + to start a new chat.',
+                'Tap the + button to start a new chat',
                 textAlign: TextAlign.center,
+                style: TextStyle(color: Color(0xFF6B7280)),
               ),
               const SizedBox(height: 16),
               OutlinedButton.icon(
@@ -263,13 +281,19 @@ class _MessagingPageState extends State<MessagingPage> {
 
           return ListTile(
             selected: _selectedConversation?.id == conversation.id,
+            selectedTileColor: const Color(0xFF0EA5E9).withOpacity(0.1),
             leading: Stack(
               children: [
                 CircleAvatar(
+                  radius: 24,
                   backgroundColor: const Color(0xFF0EA5E9),
                   child: Text(
-                    conversation.name.isNotEmpty ? conversation.name[0] : '?',
-                    style: const TextStyle(color: Colors.white),
+                    _getInitials(conversation.name),
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontWeight: FontWeight.bold,
+                      fontSize: 16,
+                    ),
                   ),
                 ),
                 if (conversation.isOnline)
@@ -277,8 +301,8 @@ class _MessagingPageState extends State<MessagingPage> {
                     right: 0,
                     bottom: 0,
                     child: Container(
-                      width: 12,
-                      height: 12,
+                      width: 14,
+                      height: 14,
                       decoration: BoxDecoration(
                         color: const Color(0xFF10B981),
                         shape: BoxShape.circle,
@@ -290,7 +314,10 @@ class _MessagingPageState extends State<MessagingPage> {
             ),
             title: Text(
               conversation.name,
-              style: const TextStyle(fontWeight: FontWeight.w500),
+              style: const TextStyle(
+                fontWeight: FontWeight.w600,
+                fontSize: 15,
+              ),
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
             ),
@@ -300,6 +327,10 @@ class _MessagingPageState extends State<MessagingPage> {
                   : conversation.lastMessage,
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
+              style: TextStyle(
+                color: Colors.grey[600],
+                fontSize: 13,
+              ),
             ),
             trailing: Column(
               mainAxisAlignment: MainAxisAlignment.center,
@@ -310,22 +341,26 @@ class _MessagingPageState extends State<MessagingPage> {
                     conversation.lastMessageTime,
                     style: Theme.of(context).textTheme.bodySmall?.copyWith(
                           color: const Color(0xFF6B7280),
+                          fontSize: 11,
                         ),
                   ),
                 if (conversation.unreadCount > 0) ...[
                   const SizedBox(height: 4),
                   Container(
-                    padding: const EdgeInsets.all(6),
+                    padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
                     decoration: const BoxDecoration(
                       color: Color(0xFF0EA5E9),
                       shape: BoxShape.circle,
                     ),
-                    child: Text(
-                      '${conversation.unreadCount}',
-                      style: const TextStyle(
-                        color: Colors.white,
-                        fontSize: 10,
-                        fontWeight: FontWeight.bold,
+                    constraints: const BoxConstraints(minWidth: 20, minHeight: 20),
+                    child: Center(
+                      child: Text(
+                        '${conversation.unreadCount}',
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontSize: 10,
+                          fontWeight: FontWeight.bold,
+                        ),
                       ),
                     ),
                   ),
@@ -334,11 +369,8 @@ class _MessagingPageState extends State<MessagingPage> {
             ),
             onTap: () async {
               setState(() => _selectedConversation = conversation);
-
-              // IMPORTANT: load messages from API so chat isn't empty
               await messageProvider.loadMessages(conversation.id);
 
-              // Scroll to bottom after loading
               if (mounted && _scrollController.hasClients) {
                 _scrollController.jumpTo(0);
               }
@@ -352,8 +384,6 @@ class _MessagingPageState extends State<MessagingPage> {
   Widget _buildChatView(
       MessageProvider messageProvider, Conversation conversation) {
     final messages = messageProvider.getMessages(conversation.id);
-    final authProvider = context.read<AuthProvider>();
-    final currentUserId = authProvider.currentUser?.id;
 
     return Column(
       children: [
@@ -362,9 +392,32 @@ class _MessagingPageState extends State<MessagingPage> {
               ? const Center(child: CircularProgressIndicator())
               : messages.isEmpty
                   ? const Center(
-                      child: Text(
-                        'No messages yet.\nSend a message to start the conversation!',
-                        textAlign: TextAlign.center,
+                      child: Padding(
+                        padding: EdgeInsets.all(24),
+                        child: Column(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Icon(
+                              LucideIcons.messageCircle,
+                              size: 48,
+                              color: Color(0xFF6B7280),
+                            ),
+                            SizedBox(height: 16),
+                            Text(
+                              'No messages yet',
+                              style: TextStyle(
+                                fontSize: 18,
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
+                            SizedBox(height: 8),
+                            Text(
+                              'Send a message to start the conversation!',
+                              textAlign: TextAlign.center,
+                              style: TextStyle(color: Color(0xFF6B7280)),
+                            ),
+                          ],
+                        ),
                       ),
                     )
                   : ListView.builder(
@@ -374,7 +427,7 @@ class _MessagingPageState extends State<MessagingPage> {
                       itemCount: messages.length,
                       itemBuilder: (context, index) {
                         final message = messages[messages.length - 1 - index];
-                        return _buildMessageBubble(message, currentUserId);
+                        return _buildMessageBubble(message);
                       },
                     ),
         ),
@@ -420,7 +473,6 @@ class _MessagingPageState extends State<MessagingPage> {
                       final text = _messageController.text.trim();
                       if (text.isEmpty) return;
 
-                      // Clear immediately for better UX
                       _messageController.clear();
 
                       final ok =
@@ -429,7 +481,6 @@ class _MessagingPageState extends State<MessagingPage> {
                       if (!mounted) return;
 
                       if (ok) {
-                        // Scroll to bottom after sending
                         if (_scrollController.hasClients) {
                           _scrollController.animateTo(
                             0,
@@ -438,7 +489,6 @@ class _MessagingPageState extends State<MessagingPage> {
                           );
                         }
                       } else {
-                        // Show error
                         ScaffoldMessenger.of(context).showSnackBar(
                           SnackBar(
                             content: Text(messageProvider.error ??
@@ -446,7 +496,6 @@ class _MessagingPageState extends State<MessagingPage> {
                             backgroundColor: Colors.red,
                           ),
                         );
-                        // Restore text if failed
                         _messageController.text = text;
                       }
                     },
@@ -460,8 +509,7 @@ class _MessagingPageState extends State<MessagingPage> {
     );
   }
 
-  Widget _buildMessageBubble(Message message, String? currentUserId) {
-    // Determine if message is from current user
+  Widget _buildMessageBubble(Message message) {
     final isOwn = message.isOwn;
 
     return Align(
@@ -474,7 +522,12 @@ class _MessagingPageState extends State<MessagingPage> {
         ),
         decoration: BoxDecoration(
           color: isOwn ? const Color(0xFF0EA5E9) : const Color(0xFFF3F4F6),
-          borderRadius: BorderRadius.circular(12),
+          borderRadius: BorderRadius.only(
+            topLeft: const Radius.circular(16),
+            topRight: const Radius.circular(16),
+            bottomLeft: Radius.circular(isOwn ? 16 : 4),
+            bottomRight: Radius.circular(isOwn ? 4 : 16),
+          ),
         ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -482,9 +535,10 @@ class _MessagingPageState extends State<MessagingPage> {
             if (!isOwn && message.sender.isNotEmpty) ...[
               Text(
                 message.sender,
-                style: const TextStyle(
+                style: TextStyle(
                   fontWeight: FontWeight.bold,
-                  fontSize: 12,
+                  fontSize: 13,
+                  color: isOwn ? Colors.white.withOpacity(0.9) : const Color(0xFF0EA5E9),
                 ),
               ),
               const SizedBox(height: 4),
@@ -493,6 +547,7 @@ class _MessagingPageState extends State<MessagingPage> {
               message.content,
               style: TextStyle(
                 color: isOwn ? Colors.white : const Color(0xFF111827),
+                fontSize: 15,
               ),
             ),
             const SizedBox(height: 4),
@@ -501,7 +556,7 @@ class _MessagingPageState extends State<MessagingPage> {
               style: TextStyle(
                 fontSize: 10,
                 color: isOwn
-                    ? const Color.fromRGBO(255, 255, 255, 0.7)
+                    ? Colors.white.withOpacity(0.7)
                     : const Color(0xFF6B7280),
               ),
             ),

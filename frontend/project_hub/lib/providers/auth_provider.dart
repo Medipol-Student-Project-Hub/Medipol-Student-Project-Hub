@@ -5,7 +5,7 @@ import '../services/storage_service.dart';
 
 class AuthProvider with ChangeNotifier {
   final AuthService _authService = AuthService();
-  final StorageService _storage = StorageService();
+  
 
   User? _currentUser;
   bool _isAuthenticated = false;
