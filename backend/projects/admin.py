@@ -24,13 +24,26 @@ class ProjectAdmin(admin.ModelAdmin):
             'fields': ('owner', 'supervisor', 'max_team_size')
         }),
         ('Details', {
-            'fields': ('required_skills', 'start_date', 'expected_duration', 'tags')
+            'fields': ('required_skills', 'start_date', 'expected_duration', 'tags', 'objectives', 'requirements')
         }),
     )
 
     def get_team_size(self, obj):
         return f"{obj.get_current_team_size()}/{obj.max_team_size}"
     get_team_size.short_description = 'Team Size'
+
+    def save_model(self, request, obj, form, change):
+        """Auto-assign owner when creating project from admin panel"""
+        if not change:  # Only on creation (not update)
+            if not obj.pk and obj.owner_id is None:
+                # If owner is not set, assign the current user (if they are a student)
+                if hasattr(request.user, 'student_profile'):
+                    obj.owner = request.user.student_profile
+                elif not obj.owner:
+                    # If admin is not a student and no owner is selected, raise error
+                    from django.core.exceptions import ValidationError
+                    raise ValidationError('Owner must be specified when creating a project.')
+        super().save_model(request, obj, form, change)
 
 
 @admin.register(Milestone)

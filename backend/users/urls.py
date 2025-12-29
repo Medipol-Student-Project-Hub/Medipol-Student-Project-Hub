@@ -18,12 +18,14 @@ from .views import (
     FacultyProfileViewSet,
     ChangePasswordView,
     ForgotPasswordView,
-    ResetPasswordView
+    ResetPasswordView,
+    NotificationViewSet
 )
 
 router = DefaultRouter()
 router.register(r'students', StudentProfileViewSet, basename='student')
 router.register(r'faculty', FacultyProfileViewSet, basename='faculty')
+router.register(r'notifications', NotificationViewSet, basename='notification')
 
 urlpatterns = [
     # Authentication endpoints

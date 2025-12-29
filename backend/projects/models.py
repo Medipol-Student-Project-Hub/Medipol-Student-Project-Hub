@@ -147,6 +147,7 @@ class JoinRequest(models.Model):
 
     def approve(self):
         from teams.models import Team
+        from users.models import Notification
 
         if self.status != 'pending':
             raise ValidationError('Only pending requests can be approved.')
@@ -166,16 +167,37 @@ class JoinRequest(models.Model):
             self.status = 'approved'
             self.response_date = timezone.now()
             self.save()
+
+            # ✅ Create notification for student
+            Notification.objects.create(
+                recipient=self.student.user,
+                notification_type='join_request',
+                title='Join Request Approved! 🎉',
+                message=f'Your request to join "{self.project.title}" has been approved! Welcome to the team.',
+                link=f'/projects/{self.project.id}'
+            )
+
             return True
         return False
 
     def reject(self):
+        from users.models import Notification
+
         if self.status != 'pending':
             raise ValidationError('Only pending requests can be rejected.')
 
         self.status = 'rejected'
         self.response_date = timezone.now()
         self.save()
+
+        # ✅ Create notification for student
+        Notification.objects.create(
+            recipient=self.student.user,
+            notification_type='join_request',
+            title='Join Request Update',
+            message=f'Your request to join "{self.project.title}" was not accepted this time. Keep exploring other projects!',
+            link=f'/projects/{self.project.id}'
+        )
 
     def clean(self):
         super().clean()

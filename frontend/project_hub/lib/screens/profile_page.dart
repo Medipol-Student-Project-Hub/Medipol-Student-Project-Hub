@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import 'package:lucide_icons_flutter/lucide_icons.dart';
 import '../providers/auth_provider.dart';
 import '../models/user.dart';
+import 'edit_profile_page.dart';
 
 class ProfilePage extends StatelessWidget {
   const ProfilePage({super.key});
@@ -21,6 +21,20 @@ class ProfilePage extends StatelessWidget {
     return Scaffold(
       appBar: AppBar(
         title: const Text('Profile'),
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.edit),
+            tooltip: 'Edit Profile',
+            onPressed: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (context) => const EditProfilePage(),
+                ),
+              );
+            },
+          ),
+        ],
       ),
       body: SingleChildScrollView(
         child: Column(
@@ -31,10 +45,17 @@ class ProfilePage extends StatelessWidget {
               padding: const EdgeInsets.all(24),
               child: Column(
                 children: [
-                  const CircleAvatar(
+                  CircleAvatar(
                     radius: 50,
-                    backgroundColor: Color(0xFF0EA5E9),
-                    child: Icon(Icons.person, size: 50, color: Colors.white),
+                    backgroundColor: const Color(0xFF0EA5E9),
+                    child: Text(
+                      user.name.isNotEmpty ? user.name[0].toUpperCase() : '?',
+                      style: const TextStyle(
+                        fontSize: 40,
+                        color: Colors.white,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
                   ),
                   const SizedBox(height: 16),
                   Text(
@@ -72,16 +93,17 @@ class ProfilePage extends StatelessWidget {
             // Logout Button
             Padding(
               padding: const EdgeInsets.all(16),
-              child: ElevatedButton(
+              child: ElevatedButton.icon(
                 onPressed: () {
                   authProvider.logout();
                   Navigator.of(context).popUntil((route) => route.isFirst);
                 },
+                icon: const Icon(Icons.logout),
+                label: const Text('Logout'),
                 style: ElevatedButton.styleFrom(
                   backgroundColor: Colors.red,
                   minimumSize: const Size(double.infinity, 48),
                 ),
-                child: const Text('Logout'),
               ),
             ),
           ],
@@ -100,7 +122,6 @@ class ProfilePage extends StatelessWidget {
           _buildInfoRow(context, 'Department', student.department),
           _buildInfoRow(context, 'Faculty', student.faculty),
           _buildInfoRow(context, 'Year', student.year),
-          _buildInfoRow(context, 'Joined', student.joinDate),
         ],
       ),
       const SizedBox(height: 16),
@@ -108,17 +129,26 @@ class ProfilePage extends StatelessWidget {
         context,
         title: 'Skills',
         items: [
-          Wrap(
-            spacing: 8,
-            runSpacing: 8,
-            children: student.skills
-                .map((skill) => Chip(
-                      label: Text(skill),
-                      backgroundColor: const Color.fromRGBO(14, 165, 233, 0.1),
-                      labelStyle: const TextStyle(color: Color(0xFF0EA5E9)),
-                    ))
-                .toList(),
-          ),
+          if (student.skills.isEmpty)
+            const Padding(
+              padding: EdgeInsets.symmetric(vertical: 8),
+              child: Text(
+                'No skills added yet. Tap edit to add skills.',
+                style: TextStyle(color: Colors.grey),
+              ),
+            )
+          else
+            Wrap(
+              spacing: 8,
+              runSpacing: 8,
+              children: student.skills
+                  .map((skill) => Chip(
+                        label: Text(skill),
+                        backgroundColor: const Color.fromRGBO(14, 165, 233, 0.1),
+                        labelStyle: const TextStyle(color: Color(0xFF0EA5E9)),
+                      ))
+                  .toList(),
+            ),
         ],
       ),
     ];
@@ -135,7 +165,6 @@ class ProfilePage extends StatelessWidget {
           _buildInfoRow(context, 'Faculty', faculty.faculty),
           _buildInfoRow(context, 'Office', faculty.officeLocation),
           _buildInfoRow(context, 'Experience', '${faculty.yearsOfExperience} years'),
-          _buildInfoRow(context, 'Joined', faculty.joinDate),
         ],
       ),
       const SizedBox(height: 16),
@@ -143,17 +172,26 @@ class ProfilePage extends StatelessWidget {
         context,
         title: 'Specialization',
         items: [
-          Wrap(
-            spacing: 8,
-            runSpacing: 8,
-            children: faculty.specialization
-                .map((spec) => Chip(
-                      label: Text(spec),
-                      backgroundColor: const Color.fromRGBO(14, 165, 233, 0.1),
-                      labelStyle: const TextStyle(color: Color(0xFF0EA5E9)),
-                    ))
-                .toList(),
-          ),
+          if (faculty.specialization.isEmpty)
+            const Padding(
+              padding: EdgeInsets.symmetric(vertical: 8),
+              child: Text(
+                'No specializations added yet. Tap edit to add.',
+                style: TextStyle(color: Colors.grey),
+              ),
+            )
+          else
+            Wrap(
+              spacing: 8,
+              runSpacing: 8,
+              children: faculty.specialization
+                  .map((spec) => Chip(
+                        label: Text(spec),
+                        backgroundColor: const Color.fromRGBO(14, 165, 233, 0.1),
+                        labelStyle: const TextStyle(color: Color(0xFF0EA5E9)),
+                      ))
+                  .toList(),
+            ),
         ],
       ),
     ];
@@ -206,7 +244,7 @@ class ProfilePage extends StatelessWidget {
           ),
           Expanded(
             child: Text(
-              value,
+              value.isNotEmpty ? value : '-',
               style: Theme.of(context).textTheme.bodyMedium,
             ),
           ),

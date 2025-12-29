@@ -1,4 +1,4 @@
-from rest_framework import generics, status, viewsets
+from rest_framework import generics, status, viewsets, filters
 from rest_framework.decorators import action
 from rest_framework.response import Response
 from rest_framework.permissions import AllowAny, IsAuthenticated
@@ -8,11 +8,12 @@ from rest_framework_simplejwt.tokens import RefreshToken
 from rest_framework_simplejwt.views import TokenObtainPairView
 import secrets
 
-from .models import Student, Faculty
+from .models import Student, Faculty, Notification
 from .serializers import (
     UserSerializer, StudentProfileSerializer, FacultyProfileSerializer,
     StudentRegistrationSerializer, FacultyRegistrationSerializer,
-    ChangePasswordSerializer, ForgotPasswordSerializer, ResetPasswordSerializer
+    ChangePasswordSerializer, ForgotPasswordSerializer, ResetPasswordSerializer,
+    NotificationSerializer
 )
 from .permissions import IsOwnerOrReadOnly, IsStudent, IsFaculty
 
@@ -281,11 +282,6 @@ class ForgotPasswordView(generics.GenericAPIView):
             user = User.objects.get(email=email)
             # Generate a reset token
             reset_token = secrets.token_urlsafe(32)
-            # Store token in user model (you may want to add a field for this)
-            # For now, we'll use a simple approach with the session or cache
-            # In production, you should store this in the database with expiry
-
-            # For demo purposes, just return success
             # In production, send email with reset link
             return Response({
                 'message': 'Password reset instructions sent to your email',
@@ -322,3 +318,39 @@ class ResetPasswordView(generics.GenericAPIView):
             return Response({
                 'error': 'User not found'
             }, status=status.HTTP_400_BAD_REQUEST)
+
+
+class NotificationViewSet(viewsets.ModelViewSet):
+    """ViewSet for managing notifications"""
+    permission_classes = [IsAuthenticated]
+    serializer_class = NotificationSerializer
+    queryset = Notification.objects.all()
+
+    def get_queryset(self):
+        """Get only notifications for the current user"""
+        return Notification.objects.filter(recipient=self.request.user)
+
+    @action(detail=False, methods=['get'])
+    def unread_count(self, request):
+        """Get count of unread notifications"""
+        count = Notification.objects.filter(
+            recipient=request.user,
+            is_read=False
+        ).count()
+        return Response({'unread_count': count})
+
+    @action(detail=True, methods=['post'])
+    def mark_as_read(self, request, pk=None):
+        """Mark a notification as read"""
+        notification = self.get_object()
+        notification.mark_as_read()
+        return Response({'status': 'notification marked as read'})
+
+    @action(detail=False, methods=['post'])
+    def mark_all_read(self, request):
+        """Mark all notifications as read for the current user"""
+        Notification.objects.filter(
+            recipient=request.user,
+            is_read=False
+        ).update(is_read=True)
+        return Response({'status': 'all notifications marked as read'})

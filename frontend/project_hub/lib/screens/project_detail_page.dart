@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../models/project.dart';
+import 'edit_project_page.dart';
 
 class ProjectDetailPage extends StatelessWidget {
   final Project project;
@@ -11,6 +12,27 @@ class ProjectDetailPage extends StatelessWidget {
     return Scaffold(
       appBar: AppBar(
         title: const Text('Project Details'),
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.edit),
+            tooltip: 'Edit Project',
+            onPressed: () async {
+              final result = await Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (context) => EditProjectPage(project: project),
+                ),
+              );
+              
+              // If edit was successful, refresh the page
+              if (result == true && context.mounted) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(content: Text('Please refresh to see changes')),
+                );
+              }
+            },
+          ),
+        ],
       ),
       body: SingleChildScrollView(
         child: Column(
@@ -27,7 +49,7 @@ class ProjectDetailPage extends StatelessWidget {
                     children: [
                       Expanded(
                         child: Text(
-                          project.title,
+                          project.title.isNotEmpty ? project.title : 'Untitled Project',
                           style: Theme.of(context).textTheme.headlineSmall?.copyWith(
                             fontWeight: FontWeight.bold,
                           ),
@@ -36,13 +58,15 @@ class ProjectDetailPage extends StatelessWidget {
                       _buildStatusBadge(project.status),
                     ],
                   ),
-                  const SizedBox(height: 8),
-                  Text(
-                    project.category,
-                    style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                      color: const Color(0xFF0EA5E9),
+                  if (project.category.isNotEmpty) ...[
+                    const SizedBox(height: 8),
+                    Text(
+                      project.category,
+                      style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                        color: const Color(0xFF0EA5E9),
+                      ),
                     ),
-                  ),
+                  ],
                   const SizedBox(height: 16),
                   LinearProgressIndicator(
                     value: project.progress / 100,
@@ -62,14 +86,15 @@ class ProjectDetailPage extends StatelessWidget {
             const SizedBox(height: 16),
 
             // Description
-            _buildSection(
-              context,
-              title: 'Description',
-              child: Text(
-                project.description,
-                style: Theme.of(context).textTheme.bodyMedium,
+            if (project.description.isNotEmpty)
+              _buildSection(
+                context,
+                title: 'Description',
+                child: Text(
+                  project.description,
+                  style: Theme.of(context).textTheme.bodyMedium,
+                ),
               ),
-            ),
 
             // Project Details
             _buildSection(
@@ -78,87 +103,99 @@ class ProjectDetailPage extends StatelessWidget {
               child: Column(
                 children: [
                   _buildDetailRow(context, 'Team Size', project.teamSizeDisplay),
-                  _buildDetailRow(context, 'Start Date', project.startDate),
-                  _buildDetailRow(context, 'Duration', project.duration),
-                  _buildDetailRow(context, 'Faculty', project.faculty),
+                  if (project.startDate.isNotEmpty)
+                    _buildDetailRow(context, 'Start Date', project.startDate),
+                  if (project.duration.isNotEmpty)
+                    _buildDetailRow(context, 'Duration', project.duration),
+                  if (project.faculty.isNotEmpty)
+                    _buildDetailRow(context, 'Faculty', project.faculty),
                 ],
               ),
             ),
 
             // Looking For
-            _buildSection(
-              context,
-              title: 'Looking For',
-              child: Wrap(
-                spacing: 8,
-                runSpacing: 8,
-                children: project.lookingFor
-                    .map((role) => Chip(
-                          label: Text(role),
-                          backgroundColor: const Color.fromRGBO(14, 165, 233, 0.1),
-                          labelStyle: const TextStyle(color: Color(0xFF0EA5E9)),
-                        ))
-                    .toList(),
+            if (project.lookingFor.isNotEmpty)
+              _buildSection(
+                context,
+                title: 'Looking For',
+                child: Wrap(
+                  spacing: 8,
+                  runSpacing: 8,
+                  children: project.lookingFor
+                      .map((role) => Chip(
+                            label: Text(role),
+                            backgroundColor: const Color.fromRGBO(14, 165, 233, 0.1),
+                            labelStyle: const TextStyle(color: Color(0xFF0EA5E9)),
+                          ))
+                      .toList(),
+                ),
               ),
-            ),
 
             // Requirements
-            _buildSection(
-              context,
-              title: 'Requirements',
-              child: Column(
-                children: project.requirements
-                    .map((req) => Padding(
-                          padding: const EdgeInsets.only(bottom: 8),
-                          child: Row(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              const Text('• ', style: TextStyle(fontSize: 20)),
-                              Expanded(child: Text(req)),
-                            ],
-                          ),
-                        ))
-                    .toList(),
+            if (project.requirements.isNotEmpty)
+              _buildSection(
+                context,
+                title: 'Requirements',
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: project.requirements
+                      .map((req) => Padding(
+                            padding: const EdgeInsets.only(bottom: 8),
+                            child: Row(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                const Text('• ', style: TextStyle(fontSize: 20)),
+                                Expanded(child: Text(req)),
+                              ],
+                            ),
+                          ))
+                      .toList(),
+                ),
               ),
-            ),
 
             // Objectives
-            _buildSection(
-              context,
-              title: 'Project Objectives',
-              child: Column(
-                children: project.objectives
-                    .map((obj) => Padding(
-                          padding: const EdgeInsets.only(bottom: 8),
-                          child: Row(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              const Text('• ', style: TextStyle(fontSize: 20)),
-                              Expanded(child: Text(obj)),
-                            ],
-                          ),
-                        ))
-                    .toList(),
+            if (project.objectives.isNotEmpty)
+              _buildSection(
+                context,
+                title: 'Project Objectives',
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: project.objectives
+                      .map((obj) => Padding(
+                            padding: const EdgeInsets.only(bottom: 8),
+                            child: Row(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                const Text('• ', style: TextStyle(fontSize: 20)),
+                                Expanded(child: Text(obj)),
+                              ],
+                            ),
+                          ))
+                      .toList(),
+                ),
               ),
-            ),
 
             // Creator Info
-            _buildSection(
-              context,
-              title: 'Project Creator',
-              child: ListTile(
-                contentPadding: EdgeInsets.zero,
-                leading: const CircleAvatar(
-                  backgroundColor: Color(0xFF0EA5E9),
-                  child: Icon(Icons.person, color: Colors.white),
+            if (project.creator.isNotEmpty)
+              _buildSection(
+                context,
+                title: 'Project Creator',
+                child: ListTile(
+                  contentPadding: EdgeInsets.zero,
+                  leading: CircleAvatar(
+                    backgroundColor: const Color(0xFF0EA5E9),
+                    child: Text(
+                      project.creator[0].toUpperCase(),
+                      style: const TextStyle(color: Colors.white),
+                    ),
+                  ),
+                  title: Text(project.creator),
+                  subtitle: project.faculty.isNotEmpty ? Text(project.faculty) : null,
                 ),
-                title: Text(project.creator),
-                subtitle: Text(project.faculty),
               ),
-            ),
 
             // Supervisor
-            if (project.supervisor != null)
+            if (project.supervisor != null && project.supervisor!.isNotEmpty)
               _buildSection(
                 context,
                 title: 'Supervisor',
@@ -174,23 +211,27 @@ class ProjectDetailPage extends StatelessWidget {
               ),
 
             // Team Members
-            _buildSection(
-              context,
-              title: 'Current Team',
-              child: Column(
-                children: project.teamMembers
-                    .map((member) => ListTile(
-                          contentPadding: EdgeInsets.zero,
-                          leading: const CircleAvatar(
-                            backgroundColor: Color(0xFF0EA5E9),
-                            child: Icon(Icons.person, color: Colors.white),
-                          ),
-                          title: Text(member.name),
-                          subtitle: Text(member.role),
-                        ))
-                    .toList(),
+            if (project.teamMembers.isNotEmpty)
+              _buildSection(
+                context,
+                title: 'Current Team',
+                child: Column(
+                  children: project.teamMembers
+                      .map((member) => ListTile(
+                            contentPadding: EdgeInsets.zero,
+                            leading: CircleAvatar(
+                              backgroundColor: const Color(0xFF0EA5E9),
+                              child: Text(
+                                member.name.isNotEmpty ? member.name[0].toUpperCase() : '?',
+                                style: const TextStyle(color: Colors.white),
+                              ),
+                            ),
+                            title: Text(member.name.isNotEmpty ? member.name : 'Team Member'),
+                            subtitle: Text(member.role),
+                          ))
+                      .toList(),
+                ),
               ),
-            ),
 
             const SizedBox(height: 80),
           ],
@@ -202,14 +243,16 @@ class ProjectDetailPage extends StatelessWidget {
           color: Colors.white,
           border: Border(top: BorderSide(color: Color(0xFFE5E7EB))),
         ),
-        child: ElevatedButton(
-          onPressed: () {
-            _showJoinRequestDialog(context);
-          },
-          style: ElevatedButton.styleFrom(
-            padding: const EdgeInsets.symmetric(vertical: 16),
+        child: SafeArea(
+          child: ElevatedButton(
+            onPressed: () {
+              _showJoinRequestDialog(context);
+            },
+            style: ElevatedButton.styleFrom(
+              padding: const EdgeInsets.symmetric(vertical: 16),
+            ),
+            child: const Text('Request to Join Project'),
           ),
-          child: const Text('Request to Join Project'),
         ),
       ),
     );
@@ -248,10 +291,13 @@ class ProjectDetailPage extends StatelessWidget {
               color: const Color(0xFF6B7280),
             ),
           ),
-          Text(
-            value,
-            style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-              fontWeight: FontWeight.w500,
+          Expanded(
+            child: Text(
+              value.isNotEmpty ? value : '-',
+              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                fontWeight: FontWeight.w500,
+              ),
+              textAlign: TextAlign.right,
             ),
           ),
         ],
@@ -279,11 +325,11 @@ class ProjectDetailPage extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
       decoration: BoxDecoration(
-        color: Color.fromRGBO(color.red, color.green, color.blue, 0.1),
+        color: color.withOpacity(0.1),
         borderRadius: BorderRadius.circular(16),
       ),
       child: Text(
-        status,
+        status.isNotEmpty ? status : 'Planning',
         style: TextStyle(
           color: color,
           fontSize: 12,
