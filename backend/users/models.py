@@ -1,7 +1,15 @@
 from django.contrib.auth.models import AbstractBaseUser, BaseUserManager, PermissionsMixin
 from django.db import models
-from django.core.validators import EmailValidator
+from django.core.validators import EmailValidator, FileExtensionValidator
+from django.core.exceptions import ValidationError
 from django.utils import timezone
+
+
+def validate_image_size(value):
+    """Validate that uploaded image is not larger than 5MB"""
+    max_size = 5 * 1024 * 1024  # 5MB
+    if value.size > max_size:
+        raise ValidationError(f'Image file too large. Maximum size is 5MB, got {value.size / (1024*1024):.2f}MB.')
 
 
 class UserManager(BaseUserManager):
@@ -36,7 +44,15 @@ class User(AbstractBaseUser, PermissionsMixin):
 
     email = models.EmailField(max_length=255, unique=True, validators=[EmailValidator()])
     name = models.CharField(max_length=255)
-    profile_image = models.ImageField(upload_to='profile_images/', null=True, blank=True)
+    profile_image = models.ImageField(
+        upload_to='profile_images/',
+        null=True,
+        blank=True,
+        validators=[
+            FileExtensionValidator(allowed_extensions=['jpg', 'jpeg', 'png', 'gif', 'webp']),
+            validate_image_size
+        ]
+    )
     user_type = models.CharField(max_length=10, choices=USER_TYPE_CHOICES)
     is_active = models.BooleanField(default=True)
     is_staff = models.BooleanField(default=False)
@@ -87,9 +103,6 @@ class Student(models.Model):
 
     def __str__(self):
         return f"{self.user.name} - {self.student_id}"
-
-    def upload_file(self, file):
-        return True
 
 
 class Faculty(models.Model):

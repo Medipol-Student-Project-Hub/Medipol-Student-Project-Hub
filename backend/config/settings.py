@@ -1,14 +1,19 @@
 from pathlib import Path
 from datetime import timedelta
 import os
+from dotenv import load_dotenv
+
+# Load environment variables
+load_dotenv()
 
 BASE_DIR = Path(__file__).resolve().parent.parent
 
-SECRET_KEY = 'django-insecure-medipol-project-hub-change-this-in-production'
+# Security settings - use environment variables in production
+SECRET_KEY = os.getenv('SECRET_KEY', 'django-insecure-dev-key-change-in-production')
 
-DEBUG = True
+DEBUG = os.getenv('DEBUG', 'False').lower() in ('true', '1', 'yes')
 
-ALLOWED_HOSTS = ['*']
+ALLOWED_HOSTS = ['localhost', '127.0.0.1', '10.0.2.2']  # 10.0.2.2 for Android emulator
 
 INSTALLED_APPS = [
     'django.contrib.admin',
@@ -135,8 +140,19 @@ SIMPLE_JWT = {
     'TOKEN_TYPE_CLAIM': 'token_type',
 }
 
-CORS_ALLOW_ALL_ORIGINS = True
+# CORS Configuration
 CORS_ALLOW_CREDENTIALS = True
+
+# In development, allow all origins; in production, use specific origins
+if DEBUG:
+    CORS_ALLOW_ALL_ORIGINS = True
+else:
+    CORS_ALLOW_ALL_ORIGINS = False
+    CORS_ALLOWED_ORIGINS = [
+        origin.strip()
+        for origin in os.getenv('CORS_ALLOWED_ORIGINS', '').split(',')
+        if origin.strip()
+    ]
 
 EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'
 

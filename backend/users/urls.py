@@ -16,7 +16,9 @@ from .views import (
     CurrentUserView,
     StudentProfileViewSet,
     FacultyProfileViewSet,
-    ChangePasswordView
+    ChangePasswordView,
+    ForgotPasswordView,
+    ResetPasswordView
 )
 
 router = DefaultRouter()
@@ -34,6 +36,8 @@ urlpatterns = [
     # User profile endpoints
     path('profile/', CurrentUserView.as_view(), name='current-user'),
     path('change-password/', ChangePasswordView.as_view(), name='change-password'),
+    path('forgot-password/', ForgotPasswordView.as_view(), name='forgot-password'),
+    path('reset-password/', ResetPasswordView.as_view(), name='reset-password'),
 
     # Router endpoints
     path('', include(router.urls)),

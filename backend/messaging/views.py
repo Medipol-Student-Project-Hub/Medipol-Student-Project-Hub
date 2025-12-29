@@ -75,7 +75,7 @@ class ConversationViewSet(viewsets.ModelViewSet):
 
     @action(detail=True, methods=['get'])
     def messages(self, request, pk=None):
-        """Get all messages in a conversation"""
+        """Get all messages in a conversation with pagination"""
         conversation = self.get_object()
 
         # Check if user is a participant
@@ -85,7 +85,14 @@ class ConversationViewSet(viewsets.ModelViewSet):
                 status=status.HTTP_403_FORBIDDEN
             )
 
-        messages = conversation.messages.all().order_by('created_at')
+        messages = conversation.messages.all().order_by('-created_at')  # Newest first
+
+        # Apply pagination
+        page = self.paginate_queryset(messages)
+        if page is not None:
+            serializer = MessageSerializer(page, many=True)
+            return self.get_paginated_response(serializer.data)
+
         serializer = MessageSerializer(messages, many=True)
         return Response(serializer.data)
 

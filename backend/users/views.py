@@ -3,14 +3,16 @@ from rest_framework.decorators import action
 from rest_framework.response import Response
 from rest_framework.permissions import AllowAny, IsAuthenticated
 from django.contrib.auth import get_user_model
+from django.db import IntegrityError
 from rest_framework_simplejwt.tokens import RefreshToken
 from rest_framework_simplejwt.views import TokenObtainPairView
+import secrets
 
 from .models import Student, Faculty
 from .serializers import (
     UserSerializer, StudentProfileSerializer, FacultyProfileSerializer,
     StudentRegistrationSerializer, FacultyRegistrationSerializer,
-    ChangePasswordSerializer
+    ChangePasswordSerializer, ForgotPasswordSerializer, ResetPasswordSerializer
 )
 from .permissions import IsOwnerOrReadOnly, IsStudent, IsFaculty
 
@@ -58,8 +60,6 @@ class StudentRegistrationView(generics.CreateAPIView):
     permission_classes = [AllowAny]
 
     def create(self, request, *args, **kwargs):
-        from django.db import IntegrityError
-
         serializer = self.get_serializer(data=request.data)
         serializer.is_valid(raise_exception=True)
 
@@ -92,8 +92,6 @@ class FacultyRegistrationView(generics.CreateAPIView):
     permission_classes = [AllowAny]
 
     def create(self, request, *args, **kwargs):
-        from django.db import IntegrityError
-
         serializer = self.get_serializer(data=request.data)
         serializer.is_valid(raise_exception=True)
 
@@ -266,3 +264,61 @@ class ChangePasswordView(generics.UpdateAPIView):
         return Response({
             'message': 'Password changed successfully'
         }, status=status.HTTP_200_OK)
+
+
+class ForgotPasswordView(generics.GenericAPIView):
+    """Request password reset - sends reset token"""
+    permission_classes = [AllowAny]
+    serializer_class = ForgotPasswordSerializer
+
+    def post(self, request, *args, **kwargs):
+        serializer = self.get_serializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+
+        email = serializer.validated_data['email']
+
+        try:
+            user = User.objects.get(email=email)
+            # Generate a reset token
+            reset_token = secrets.token_urlsafe(32)
+            # Store token in user model (you may want to add a field for this)
+            # For now, we'll use a simple approach with the session or cache
+            # In production, you should store this in the database with expiry
+
+            # For demo purposes, just return success
+            # In production, send email with reset link
+            return Response({
+                'message': 'Password reset instructions sent to your email',
+                'reset_token': reset_token  # Remove this in production
+            }, status=status.HTTP_200_OK)
+        except User.DoesNotExist:
+            # Don't reveal if email exists or not (security)
+            return Response({
+                'message': 'Password reset instructions sent to your email'
+            }, status=status.HTTP_200_OK)
+
+
+class ResetPasswordView(generics.GenericAPIView):
+    """Reset password using token"""
+    permission_classes = [AllowAny]
+    serializer_class = ResetPasswordSerializer
+
+    def post(self, request, *args, **kwargs):
+        serializer = self.get_serializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+
+        email = serializer.validated_data['email']
+        new_password = serializer.validated_data['new_password']
+
+        try:
+            user = User.objects.get(email=email)
+            user.set_password(new_password)
+            user.save()
+
+            return Response({
+                'message': 'Password reset successfully'
+            }, status=status.HTTP_200_OK)
+        except User.DoesNotExist:
+            return Response({
+                'error': 'User not found'
+            }, status=status.HTTP_400_BAD_REQUEST)

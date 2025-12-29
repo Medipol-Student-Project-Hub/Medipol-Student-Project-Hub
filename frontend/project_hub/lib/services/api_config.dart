@@ -22,14 +22,17 @@ class ApiConfig {
   static const String logoutEndpoint = '$apiPrefix/auth/logout/';
   static const String profileEndpoint = '$apiPrefix/auth/profile/';
   static const String changePasswordEndpoint = '$apiPrefix/auth/change-password/';
+  static const String forgotPasswordEndpoint = '$apiPrefix/auth/forgot-password/';
+  static const String resetPasswordEndpoint = '$apiPrefix/auth/reset-password/';
 
-  // Users endpoints
-  static const String usersEndpoint = '$apiPrefix/users/';
+  // Users endpoints (under auth)
+  static const String studentsEndpoint = '$apiPrefix/auth/students/';
+  static const String facultyEndpoint = '$apiPrefix/auth/faculty/';
 
   // Projects endpoints
   static const String projectsEndpoint = '$apiPrefix/projects/';
-  static const String joinRequestsEndpoint = '$apiPrefix/requests/';
-  static const String milestonesEndpoint = '$apiPrefix/milestones/';
+  static const String joinRequestsEndpoint = '$apiPrefix/projects/requests/';
+  static const String milestonesEndpoint = '$apiPrefix/projects/milestones/';
 
   // Teams endpoints
   static const String teamsEndpoint = '$apiPrefix/teams/';
