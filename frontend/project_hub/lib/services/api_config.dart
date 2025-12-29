@@ -22,6 +22,9 @@ class ApiConfig {
   // Student list: /api/auth/students/
   static const String usersEndpoint = '$apiPrefix/auth/';
 
+  // Notifications
+  static const String notificationsEndpoint = '$apiPrefix/auth/notifications/';
+
   // Projects
   static const String projectsEndpoint = '$apiPrefix/projects/';
   static const String joinRequestsEndpoint = '$apiPrefix/requests/';
