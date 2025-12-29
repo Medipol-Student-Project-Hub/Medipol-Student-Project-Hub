@@ -1,21 +1,25 @@
 import 'package:dio/dio.dart';
 import 'api_client.dart';
 import 'api_config.dart';
-import '../models/notification.dart';
+import '../models/notification.dart' as model;
 
-/// Notification Service
-/// Handles all notification-related API calls
 class NotificationService {
   final ApiClient _apiClient = ApiClient();
 
   /// Get all notifications for current user
-  Future<List<Notification>> getNotifications() async {
+  Future<List<model.Notification>> getNotifications() async {
     try {
-      final response = await _apiClient.get('${ApiConfig.apiPrefix}/auth/notifications/');
+      final response = await _apiClient.get(ApiConfig.notificationsEndpoint);
 
       if (response.statusCode == 200) {
-        final List<dynamic> data = response.data['results'] ?? response.data;
-        return data.map((json) => Notification.fromJson(json)).toList();
+        final dynamic data = response.data;
+        final List<dynamic> items = data is Map 
+            ? (data['results'] ?? data['notifications'] ?? []) 
+            : data;
+        
+        return items
+            .map((json) => model.Notification.fromJson(json))
+            .toList();
       } else {
         throw Exception('Failed to load notifications');
       }
@@ -27,24 +31,30 @@ class NotificationService {
   /// Get unread notification count
   Future<int> getUnreadCount() async {
     try {
-      final response = await _apiClient.get('${ApiConfig.apiPrefix}/auth/notifications/unread_count/');
+      final response = await _apiClient.get(
+        '${ApiConfig.notificationsEndpoint}unread-count/',
+      );
 
       if (response.statusCode == 200) {
-        return response.data['unread_count'] ?? 0;
+        return response.data['count'] ?? 0;
       } else {
-        return 0;
+        throw Exception('Failed to get unread count');
       }
-    } on DioException {
-      return 0;
+    } on DioException catch (e) {
+      throw _handleError(e);
     }
   }
 
-  /// Mark notification as read
+  /// Mark a notification as read
   Future<void> markAsRead(String notificationId) async {
     try {
-      await _apiClient.post(
-        '${ApiConfig.apiPrefix}/auth/notifications/$notificationId/mark_as_read/',
+      final response = await _apiClient.patch(
+        '${ApiConfig.notificationsEndpoint}$notificationId/mark-read/',
       );
+
+      if (response.statusCode != 200) {
+        throw Exception('Failed to mark notification as read');
+      }
     } on DioException catch (e) {
       throw _handleError(e);
     }
@@ -53,9 +63,13 @@ class NotificationService {
   /// Mark all notifications as read
   Future<void> markAllAsRead() async {
     try {
-      await _apiClient.post(
-        '${ApiConfig.apiPrefix}/auth/notifications/mark_all_read/',
+      final response = await _apiClient.post(
+        '${ApiConfig.notificationsEndpoint}mark-all-read/',
       );
+
+      if (response.statusCode != 200) {
+        throw Exception('Failed to mark all notifications as read');
+      }
     } on DioException catch (e) {
       throw _handleError(e);
     }
@@ -70,6 +84,15 @@ class NotificationService {
           return data['detail'].toString();
         } else if (data.containsKey('error')) {
           return data['error'].toString();
+        } else if (data.containsKey('message')) {
+          return data['message'].toString();
+        } else {
+          for (var value in data.values) {
+            if (value is String) return value;
+            if (value is List && value.isNotEmpty) {
+              return value.first.toString();
+            }
+          }
         }
       }
       return 'Error: ${error.response!.statusCode}';

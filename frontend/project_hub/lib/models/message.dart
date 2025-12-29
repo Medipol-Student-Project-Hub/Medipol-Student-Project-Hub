@@ -47,9 +47,7 @@ class Conversation {
         if (displayName.isEmpty) {
           displayName = other['email']?.toString() ?? '';
         }
-        if (avatarUrl == null) {
-          avatarUrl = other['profile_image']?.toString() ?? other['avatar']?.toString();
-        }
+        avatarUrl ??= other['profile_image']?.toString() ?? other['avatar']?.toString();
       }
     }
 

@@ -14,12 +14,12 @@ class ApiConfig {
   static const String logoutEndpoint = '$apiPrefix/auth/logout/';
   static const String profileEndpoint = '$apiPrefix/auth/profile/';
   static const String changePasswordEndpoint = '$apiPrefix/auth/change-password/';
+  
+  // Password reset endpoints
   static const String forgotPasswordEndpoint = '$apiPrefix/auth/forgot-password/';
   static const String resetPasswordEndpoint = '$apiPrefix/auth/reset-password/';
 
-  // ✅ USERS ARE UNDER AUTH IN YOUR BACKEND
-  // Faculty list:  /api/auth/faculty/
-  // Student list: /api/auth/students/
+  // Users
   static const String usersEndpoint = '$apiPrefix/auth/';
 
   // Projects
@@ -32,6 +32,9 @@ class ApiConfig {
 
   // Messaging
   static const String conversationsEndpoint = '$apiPrefix/messaging/conversations/';
+
+  // Notifications
+  static const String notificationsEndpoint = '$apiPrefix/notifications/';
 
   static const Duration connectTimeout = Duration(seconds: 30);
   static const Duration receiveTimeout = Duration(seconds: 30);

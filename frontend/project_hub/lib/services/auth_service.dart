@@ -4,8 +4,6 @@ import 'api_config.dart';
 import 'storage_service.dart';
 import '../models/user.dart';
 
-/// Authentication Service
-/// Handles all authentication-related API calls
 class AuthService {
   final ApiClient _apiClient = ApiClient();
   final StorageService _storage = StorageService();
@@ -28,7 +26,6 @@ class AuthService {
       if (response.statusCode == 200) {
         final data = response.data;
 
-        // Save tokens
         await _storage.saveAuthData(
           accessToken: data['access'],
           refreshToken: data['refresh'],
@@ -37,7 +34,6 @@ class AuthService {
           email: data['user']['email'],
         );
 
-        // Parse and return user
         return _parseUser(data['user']);
       } else {
         throw Exception('Login failed');
@@ -77,7 +73,6 @@ class AuthService {
       if (response.statusCode == 201) {
         final data = response.data;
 
-        // Save tokens
         await _storage.saveAuthData(
           accessToken: data['access'],
           refreshToken: data['refresh'],
@@ -125,7 +120,6 @@ class AuthService {
       if (response.statusCode == 201) {
         final data = response.data;
 
-        // Save tokens
         await _storage.saveAuthData(
           accessToken: data['access'],
           refreshToken: data['refresh'],
@@ -143,6 +137,44 @@ class AuthService {
     }
   }
 
+  /// Forgot password - send reset email
+  Future<void> forgotPassword(String email) async {
+    try {
+      final response = await _apiClient.post(
+        ApiConfig.forgotPasswordEndpoint,
+        data: {'email': email},
+      );
+
+      if (response.statusCode != 200 && response.statusCode != 201) {
+        throw Exception('Failed to send reset email');
+      }
+    } on DioException catch (e) {
+      throw _handleError(e);
+    }
+  }
+
+  /// Reset password with token
+  Future<void> resetPassword({
+    required String token,
+    required String newPassword,
+  }) async {
+    try {
+      final response = await _apiClient.post(
+        ApiConfig.resetPasswordEndpoint,
+        data: {
+          'token': token,
+          'password': newPassword,
+        },
+      );
+
+      if (response.statusCode != 200) {
+        throw Exception('Failed to reset password');
+      }
+    } on DioException catch (e) {
+      throw _handleError(e);
+    }
+  }
+
   /// Logout
   Future<void> logout() async {
     try {
@@ -154,7 +186,7 @@ class AuthService {
         );
       }
     } catch (e) {
-      // Ignore logout errors, just clear local data
+      // Ignore logout errors
     } finally {
       await _storage.clearAll();
     }
@@ -180,48 +212,6 @@ class AuthService {
     return await _storage.isLoggedIn();
   }
 
-  /// Request password reset
-  Future<void> forgotPassword({required String email}) async {
-    try {
-      final response = await _apiClient.post(
-        ApiConfig.forgotPasswordEndpoint,
-        data: {'email': email},
-      );
-
-      if (response.statusCode == 200) {
-        return;
-      } else {
-        throw Exception('Failed to send password reset email');
-      }
-    } on DioException catch (e) {
-      throw _handleError(e);
-    }
-  }
-
-  /// Reset password with token
-  Future<void> resetPassword({
-    required String token,
-    required String newPassword,
-  }) async {
-    try {
-      final response = await _apiClient.post(
-        ApiConfig.resetPasswordEndpoint,
-        data: {
-          'token': token,
-          'new_password': newPassword,
-        },
-      );
-
-      if (response.statusCode == 200) {
-        return;
-      } else {
-        throw Exception('Failed to reset password');
-      }
-    } on DioException catch (e) {
-      throw _handleError(e);
-    }
-  }
-
   /// Parse user from JSON
   User _parseUser(Map<String, dynamic> json) {
     final userType = json['user_type'];
@@ -238,13 +228,11 @@ class AuthService {
     if (error.response != null) {
       final data = error.response!.data;
       if (data is Map) {
-        // Try to extract error message
         if (data.containsKey('detail')) {
           return data['detail'];
         } else if (data.containsKey('error')) {
           return data['error'];
         } else {
-          // Return first error message found
           for (var value in data.values) {
             if (value is String) return value;
             if (value is List && value.isNotEmpty) return value.first.toString();
