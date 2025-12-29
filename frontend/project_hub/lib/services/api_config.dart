@@ -37,7 +37,7 @@ class ApiConfig {
   static const String conversationsEndpoint = '$apiPrefix/messaging/conversations/';
 
   // Notifications
-  static const String notificationsEndpoint = '$apiPrefix/notifications/';
+  
 
   static const Duration connectTimeout = Duration(seconds: 30);
   static const Duration receiveTimeout = Duration(seconds: 30);
