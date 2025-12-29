@@ -10,6 +10,7 @@ import 'profile_page.dart';
 import 'messaging_page.dart';
 import 'notifications_page.dart';
 import 'professor_dashboard.dart';
+import 'join_requests_page.dart';
 
 class HomePage extends StatefulWidget {
   const HomePage({super.key});
@@ -49,14 +50,32 @@ class _HomePageState extends State<HomePage>
   Widget build(BuildContext context) {
     final projectProvider = Provider.of<ProjectProvider>(context);
     final authProvider = Provider.of<AuthProvider>(context);
-    final projects =
-        _selectedTab == 0 ? projectProvider.projects : projectProvider.myProjects;
+    final currentUserName = authProvider.currentUser?.name;
+
+    // Filter out user's own projects from Explore tab
+    final exploreProjects = projectProvider.projects
+        .where((p) => p.creator != currentUserName)
+        .toList();
+
+    final projects = _selectedTab == 0 ? exploreProjects : projectProvider.myProjects;
 
     return Scaffold(
       appBar: AppBar(
         automaticallyImplyLeading: false,
         title: const Text('Medipol Project Hub'),
         actions: [
+          IconButton(
+            icon: const Icon(LucideIcons.userPlus),
+            tooltip: 'Join Requests',
+            onPressed: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (context) => const JoinRequestsPage(),
+                ),
+              );
+            },
+          ),
           IconButton(
             icon: const Icon(LucideIcons.bell),
             tooltip: 'Notifications',

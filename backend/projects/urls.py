@@ -11,9 +11,10 @@ from .views import (
 )
 
 router = DefaultRouter()
-router.register(r'', ProjectViewSet, basename='project')
+# Register specific paths BEFORE the catch-all empty prefix
 router.register(r'milestones', MilestoneViewSet, basename='milestone')
 router.register(r'requests', JoinRequestViewSet, basename='joinrequest')
+router.register(r'', ProjectViewSet, basename='project')
 
 urlpatterns = [
     path('', include(router.urls)),

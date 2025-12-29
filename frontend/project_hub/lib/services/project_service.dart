@@ -30,7 +30,16 @@ class ProjectService {
       final response = await _apiClient.get('${ApiConfig.projectsEndpoint}my-projects/');
 
       if (response.statusCode == 200) {
-        final List<dynamic> data = response.data['results'] ?? response.data;
+        // my-projects returns a list directly, not paginated
+        final dynamic rawData = response.data;
+        final List<dynamic> data;
+        if (rawData is List) {
+          data = rawData;
+        } else if (rawData is Map && rawData['results'] != null) {
+          data = rawData['results'];
+        } else {
+          data = [];
+        }
         return data.map((json) => Project.fromJson(json)).toList();
       } else {
         throw Exception('Failed to load my projects');
@@ -177,6 +186,54 @@ class ProjectService {
 
       if (response.statusCode != 201) {
         throw Exception('Failed to send join request');
+      }
+    } on DioException catch (e) {
+      throw _handleError(e);
+    }
+  }
+
+  /// Get all join requests for the current user
+  Future<List<Map<String, dynamic>>> getJoinRequests() async {
+    try {
+      final response = await _apiClient.get(ApiConfig.joinRequestsEndpoint);
+
+      if (response.statusCode == 200) {
+        final List<dynamic> data = response.data['results'] ?? response.data;
+        return data.map((e) => Map<String, dynamic>.from(e)).toList();
+      } else {
+        throw Exception('Failed to load join requests');
+      }
+    } on DioException catch (e) {
+      throw _handleError(e);
+    }
+  }
+
+  /// Approve a join request
+  Future<void> approveJoinRequest(int requestId) async {
+    try {
+      final response = await _apiClient.post(
+        '${ApiConfig.joinRequestsEndpoint}$requestId/approve/',
+        data: {},
+      );
+
+      if (response.statusCode != 200) {
+        throw Exception('Failed to approve request');
+      }
+    } on DioException catch (e) {
+      throw _handleError(e);
+    }
+  }
+
+  /// Reject a join request
+  Future<void> rejectJoinRequest(int requestId) async {
+    try {
+      final response = await _apiClient.post(
+        '${ApiConfig.joinRequestsEndpoint}$requestId/reject/',
+        data: {},
+      );
+
+      if (response.statusCode != 200) {
+        throw Exception('Failed to reject request');
       }
     } on DioException catch (e) {
       throw _handleError(e);

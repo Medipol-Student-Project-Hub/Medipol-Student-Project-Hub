@@ -1,37 +1,51 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 import '../models/project.dart';
+import '../providers/project_provider.dart';
+import '../providers/auth_provider.dart';
 import 'edit_project_page.dart';
 
-class ProjectDetailPage extends StatelessWidget {
+class ProjectDetailPage extends StatefulWidget {
   final Project project;
 
   const ProjectDetailPage({super.key, required this.project});
 
   @override
+  State<ProjectDetailPage> createState() => _ProjectDetailPageState();
+}
+
+class _ProjectDetailPageState extends State<ProjectDetailPage> {
+  bool _hasRequestedJoin = false;
+
+  @override
   Widget build(BuildContext context) {
+    final project = widget.project;
+    final authProvider = Provider.of<AuthProvider>(context);
+    final isOwner = authProvider.currentUser?.name == project.creator;
+
     return Scaffold(
       appBar: AppBar(
         title: const Text('Project Details'),
         actions: [
-          IconButton(
-            icon: const Icon(Icons.edit),
-            tooltip: 'Edit Project',
-            onPressed: () async {
-              final result = await Navigator.push(
-                context,
-                MaterialPageRoute(
-                  builder: (context) => EditProjectPage(project: project),
-                ),
-              );
-              
-              // If edit was successful, refresh the page
-              if (result == true && context.mounted) {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(content: Text('Please refresh to see changes')),
+          if (isOwner)
+            IconButton(
+              icon: const Icon(Icons.edit),
+              tooltip: 'Edit Project',
+              onPressed: () async {
+                final result = await Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => EditProjectPage(project: project),
+                  ),
                 );
-              }
-            },
-          ),
+
+                if (result == true && context.mounted) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(content: Text('Please refresh to see changes')),
+                  );
+                }
+              },
+            ),
         ],
       ),
       body: SingleChildScrollView(
@@ -237,7 +251,7 @@ class ProjectDetailPage extends StatelessWidget {
           ],
         ),
       ),
-      bottomNavigationBar: Container(
+      bottomNavigationBar: isOwner ? null : Container(
         padding: const EdgeInsets.all(16),
         decoration: const BoxDecoration(
           color: Colors.white,
@@ -245,13 +259,13 @@ class ProjectDetailPage extends StatelessWidget {
         ),
         child: SafeArea(
           child: ElevatedButton(
-            onPressed: () {
+            onPressed: _hasRequestedJoin ? null : () {
               _showJoinRequestDialog(context);
             },
             style: ElevatedButton.styleFrom(
               padding: const EdgeInsets.symmetric(vertical: 16),
             ),
-            child: const Text('Request to Join Project'),
+            child: Text(_hasRequestedJoin ? 'Request Sent' : 'Request to Join Project'),
           ),
         ),
       ),
@@ -342,7 +356,7 @@ class ProjectDetailPage extends StatelessWidget {
   void _showJoinRequestDialog(BuildContext context) {
     showDialog(
       context: context,
-      builder: (context) => AlertDialog(
+      builder: (dialogContext) => AlertDialog(
         title: const Text('Join Request'),
         content: const Text(
           'Your request to join this project will be sent to the project creator. '
@@ -350,17 +364,36 @@ class ProjectDetailPage extends StatelessWidget {
         ),
         actions: [
           TextButton(
-            onPressed: () => Navigator.pop(context),
+            onPressed: () => Navigator.pop(dialogContext),
             child: const Text('Cancel'),
           ),
           ElevatedButton(
-            onPressed: () {
-              Navigator.pop(context);
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(
-                  content: Text('Join request sent successfully!'),
-                ),
-              );
+            onPressed: () async {
+              Navigator.pop(dialogContext);
+
+              final projectProvider = Provider.of<ProjectProvider>(context, listen: false);
+              final success = await projectProvider.requestJoinProject(widget.project.id);
+
+              if (mounted) {
+                if (success) {
+                  setState(() {
+                    _hasRequestedJoin = true;
+                  });
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(
+                      content: Text('Join request sent successfully!'),
+                      backgroundColor: Colors.green,
+                    ),
+                  );
+                } else {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: Text(projectProvider.error ?? 'Failed to send join request'),
+                      backgroundColor: Colors.red,
+                    ),
+                  );
+                }
+              }
             },
             child: const Text('Send Request'),
           ),

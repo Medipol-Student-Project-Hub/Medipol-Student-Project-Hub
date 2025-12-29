@@ -198,7 +198,7 @@ class ProjectViewSet(viewsets.ModelViewSet):
             'milestones': MilestoneSerializer(milestones, many=True).data
         })
 
-    @action(detail=False, methods=['get'], url_path='my-projects')
+    @action(detail=False, methods=['get'], url_path='my-projects', permission_classes=[IsAuthenticated])
     def my_projects(self, request):
         """
         Get projects related to the current user:

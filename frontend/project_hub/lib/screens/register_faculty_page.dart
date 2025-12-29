@@ -204,6 +204,7 @@ class _RegisterFacultyPageState extends State<RegisterFacultyPage> {
               // Faculty Dropdown
               DropdownButtonFormField<String>(
                 value: _selectedFaculty,
+                isExpanded: true,
                 decoration: const InputDecoration(
                   labelText: 'Faculty',
                   border: OutlineInputBorder(),
@@ -212,7 +213,10 @@ class _RegisterFacultyPageState extends State<RegisterFacultyPage> {
                 items: _faculties.map((faculty) {
                   return DropdownMenuItem(
                     value: faculty,
-                    child: Text(faculty),
+                    child: Text(
+                      faculty,
+                      overflow: TextOverflow.ellipsis,
+                    ),
                   );
                 }).toList(),
                 onChanged: (value) {

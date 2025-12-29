@@ -7,7 +7,7 @@ class UserService {
 
   Future<List<Map<String, dynamic>>> getAllFaculty() async {
     try {
-      final response = await _apiClient.get('${ApiConfig.usersEndpoint}faculty/');
+      final response = await _apiClient.get(ApiConfig.facultyEndpoint);
 
       if (response.statusCode == 200) {
         final dynamic raw = response.data;
@@ -23,7 +23,7 @@ class UserService {
 
   Future<List<Map<String, dynamic>>> getAllStudents() async {
     try {
-      final response = await _apiClient.get('${ApiConfig.usersEndpoint}students/');
+      final response = await _apiClient.get(ApiConfig.studentsEndpoint);
 
       if (response.statusCode == 200) {
         final dynamic raw = response.data;
