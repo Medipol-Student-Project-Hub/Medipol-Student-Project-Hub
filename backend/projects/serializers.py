@@ -138,29 +138,77 @@ class ProjectDetailSerializer(serializers.ModelSerializer):
 
 
 class ProjectCreateSerializer(serializers.ModelSerializer):
+    supervisor_name = serializers.CharField(required=False, allow_blank=True, write_only=True)
+
     class Meta:
         model = Project
         fields = [
-            'title', 'description', 'category', 'status', 'supervisor',
+            'title', 'description', 'category', 'status', 'supervisor', 'supervisor_name',
             'required_skills', 'max_team_size', 'start_date', 'expected_duration',
             'tags', 'objectives', 'requirements'
         ]
+        extra_kwargs = {
+            'supervisor': {'required': False, 'allow_null': True}
+        }
 
     def validate_max_team_size(self, value):
         if value < 1 or value > 20:
             raise serializers.ValidationError("Team size must be between 1 and 20.")
         return value
 
+    def validate(self, attrs):
+        """Handle supervisor field - accept either ID or name"""
+        supervisor_name = attrs.pop('supervisor_name', None)
+
+        # If supervisor_name is provided but supervisor ID is not
+        if supervisor_name and not attrs.get('supervisor'):
+            from users.models import Faculty
+            # Try to find faculty by name (case-insensitive)
+            try:
+                faculty = Faculty.objects.filter(
+                    user__name__icontains=supervisor_name
+                ).first()
+                if faculty:
+                    attrs['supervisor'] = faculty
+                # If not found, we'll just ignore it (supervisor is optional)
+            except Exception:
+                pass
+
+        return attrs
+
     def create(self, validated_data):
         from teams.models import Team
+        from users.models import Student
 
         request = self.context.get('request')
-        try:
-            student = request.user.student_profile
-        except AttributeError:
-            raise serializers.ValidationError("Only students can create projects.")
+        user = request.user
 
-        project = Project.objects.create(owner=student, **validated_data)
+        # ✅ Both students and faculty can create projects
+        if user.user_type == 'student':
+            try:
+                owner = user.student_profile
+            except AttributeError:
+                raise serializers.ValidationError("Student profile not found.")
+        elif user.user_type == 'faculty':
+            # ✅ Faculty can create projects too!
+            # For faculty-created projects, we need to assign a student owner
+            # Option 1: Require 'owner_id' in request data
+            # Option 2: Create a placeholder or assign to first team member
+            # For now, we'll require owner_id for faculty
+            owner_id = self.context.get('request').data.get('owner_id')
+            if owner_id:
+                try:
+                    owner = Student.objects.get(pk=owner_id)
+                except Student.DoesNotExist:
+                    raise serializers.ValidationError("Invalid owner_id. Student not found.")
+            else:
+                raise serializers.ValidationError(
+                    "Faculty members must specify an owner_id (student) when creating a project."
+                )
+        else:
+            raise serializers.ValidationError("Only students and faculty can create projects.")
+
+        project = Project.objects.create(owner=owner, **validated_data)
 
         Team.objects.create(project=project, max_members=project.max_team_size)
 
@@ -168,13 +216,18 @@ class ProjectCreateSerializer(serializers.ModelSerializer):
 
 
 class ProjectUpdateSerializer(serializers.ModelSerializer):
+    supervisor_name = serializers.CharField(required=False, allow_blank=True, write_only=True)
+
     class Meta:
         model = Project
         fields = [
-            'title', 'description', 'category', 'status', 'supervisor',
+            'title', 'description', 'category', 'status', 'supervisor', 'supervisor_name',
             'required_skills', 'max_team_size', 'start_date', 'expected_duration',
             'tags', 'objectives', 'requirements'
         ]
+        extra_kwargs = {
+            'supervisor': {'required': False, 'allow_null': True}
+        }
 
     def validate_max_team_size(self, value):
         if self.instance:
@@ -184,6 +237,25 @@ class ProjectUpdateSerializer(serializers.ModelSerializer):
                     f"Cannot set max team size below current member count ({current_size})."
                 )
         return value
+
+    def validate(self, attrs):
+        """Handle supervisor field - accept either ID or name"""
+        supervisor_name = attrs.pop('supervisor_name', None)
+
+        # If supervisor_name is provided but supervisor ID is not
+        if supervisor_name and not attrs.get('supervisor'):
+            from users.models import Faculty
+            # Try to find faculty by name (case-insensitive)
+            try:
+                faculty = Faculty.objects.filter(
+                    user__name__icontains=supervisor_name
+                ).first()
+                if faculty:
+                    attrs['supervisor'] = faculty
+            except Exception:
+                pass
+
+        return attrs
 
 
 class TaskSerializer(serializers.ModelSerializer):

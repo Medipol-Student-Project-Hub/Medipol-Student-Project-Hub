@@ -27,8 +27,10 @@ class ProjectViewSet(viewsets.ModelViewSet):
     def get_permissions(self):
         if self.action in ['list', 'retrieve']:
             return []  # No authentication required for viewing
+        elif self.action == 'create':
+            return [IsAuthenticated()]  # Only authentication required for creation
         else:
-            return [IsAuthenticated(), IsProjectOwnerOrReadOnly()]  # Authentication required for create/update/delete
+            return [IsAuthenticated(), IsProjectOwnerOrReadOnly()]  # Authentication + ownership for update/delete
 
     def get_queryset(self):
         queryset = Project.objects.select_related(
@@ -79,6 +81,8 @@ class ProjectViewSet(viewsets.ModelViewSet):
 
     @action(detail=True, methods=['post'], permission_classes=[IsAuthenticated, IsStudent])
     def join(self, request, pk=None):
+        from users.models import Notification
+
         project = self.get_object()
 
         try:
@@ -99,7 +103,17 @@ class ProjectViewSet(viewsets.ModelViewSet):
         )
 
         if serializer.is_valid():
-            serializer.save()
+            join_request = serializer.save()
+
+            # ✅ Notify project owner about new join request
+            Notification.objects.create(
+                recipient=project.owner.user,
+                notification_type='join_request',
+                title='New Join Request! 🙋',
+                message=f'{student.user.name} wants to join your project "{project.title}"',
+                link=f'/projects/{project.id}/requests'
+            )
+
             return Response(serializer.data, status=status.HTTP_201_CREATED)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
@@ -186,13 +200,23 @@ class ProjectViewSet(viewsets.ModelViewSet):
 
     @action(detail=False, methods=['get'], url_path='my-projects')
     def my_projects(self, request):
-        """Get projects owned by the current user"""
+        """
+        Get projects related to the current user:
+        - For students: Projects they own OR are team members of
+        - For faculty: Projects they supervise
+        """
         try:
             if request.user.user_type == 'student':
                 student = request.user.student_profile
-                queryset = Project.objects.filter(owner=student).select_related(
+
+                # ✅ Get projects where student is owner OR team member
+                from django.db.models import Q
+                queryset = Project.objects.filter(
+                    Q(owner=student) | Q(team__members=student)
+                ).distinct().select_related(
                     'owner__user', 'supervisor__user'
                 ).prefetch_related('milestones', 'team__members')
+
             elif request.user.user_type == 'faculty':
                 faculty = request.user.faculty_profile
                 queryset = Project.objects.filter(supervisor=faculty).select_related(

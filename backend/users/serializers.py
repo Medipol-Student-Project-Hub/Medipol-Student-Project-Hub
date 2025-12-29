@@ -1,7 +1,7 @@
 from rest_framework import serializers
 from django.contrib.auth import get_user_model
 from django.contrib.auth.password_validation import validate_password
-from .models import Student, Faculty
+from .models import Student, Faculty, Notification
 
 User = get_user_model()
 
@@ -191,3 +191,16 @@ class ChangePasswordSerializer(serializers.Serializer):
         if attrs['new_password'] != attrs['new_password_confirm']:
             raise serializers.ValidationError({"new_password": "Password fields didn't match."})
         return attrs
+
+
+class NotificationSerializer(serializers.ModelSerializer):
+    """Serializer for notifications"""
+    recipient_name = serializers.CharField(source='recipient.name', read_only=True)
+
+    class Meta:
+        model = Notification
+        fields = [
+            'id', 'recipient', 'recipient_name', 'notification_type',
+            'title', 'message', 'link', 'is_read', 'created_at'
+        ]
+        read_only_fields = ['id', 'created_at', 'recipient_name']

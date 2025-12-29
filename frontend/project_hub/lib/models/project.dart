@@ -41,17 +41,22 @@ class Project {
     // Debug logging
     print('=== Parsing Project ===');
     print('Raw JSON: $json');
-    
-    // Parse creator name
+
+    // Parse creator name (backend sends 'owner_name' or 'owner_info')
     String creatorName = '';
-    final creatorData = json['creator'];
+    final creatorData = json['creator'] ?? json['owner_name'] ?? json['owner_info'];
     if (creatorData is Map) {
-      creatorName = creatorData['name']?.toString() ?? 
-                   creatorData['user']?['name']?.toString() ?? 
-                   creatorData['email']?.toString() ?? 
+      // If it's an object with nested user data
+      creatorName = creatorData['name']?.toString() ??
+                   creatorData['user']?['name']?.toString() ??
+                   creatorData['email']?.toString() ??
+                   creatorData['user']?['email']?.toString() ??
                    'Unknown';
-    } else if (creatorData != null) {
-      creatorName = creatorData.toString();
+    } else if (creatorData is String && creatorData.isNotEmpty) {
+      // If it's a simple string
+      creatorName = creatorData;
+    } else {
+      creatorName = 'Unknown';
     }
     print('Creator: $creatorName');
 

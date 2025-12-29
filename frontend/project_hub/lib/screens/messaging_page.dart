@@ -3,7 +3,6 @@ import 'package:provider/provider.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 
 import '../providers/message_provider.dart';
-import '../providers/auth_provider.dart';
 import '../models/message.dart';
 import 'new_conversation_page.dart';
 

@@ -69,41 +69,50 @@ class ProjectService {
     String? supervisorName,
   }) async {
     try {
+      // Validate category value (backend expects lowercase values)
+      final validCategories = ['engineering', 'design', 'health', 'business', 'ai', 'web', 'mobile', 'research', 'other'];
+      final categoryValue = category.toLowerCase();
+
+      if (!validCategories.contains(categoryValue)) {
+        throw Exception('Invalid category: $category');
+      }
+
       // Build request data
       final Map<String, dynamic> requestData = {
-        'title': title,
-        'description': description,
-        'category': category,
+        'title': title.trim(),
+        'description': description.trim(),
+        'category': categoryValue,  // ✅ Use validated lowercase value
         'tags': lookingFor,
+        'status': 'draft',  // ✅ Explicitly set status
       };
 
       // Add optional fields only if they have values
       if (maxTeamSize != null && maxTeamSize > 0) {
         requestData['max_team_size'] = maxTeamSize;
       }
-      
+
       if (startDate != null && startDate.isNotEmpty) {
         requestData['start_date'] = startDate;
       }
-      
+
       if (duration != null && duration.isNotEmpty) {
         requestData['expected_duration'] = duration;
       }
-      
+
       if (requirements != null && requirements.isNotEmpty) {
         requestData['required_skills'] = requirements;
       }
-      
+
       if (objectives != null && objectives.isNotEmpty) {
         requestData['objectives'] = objectives;
       }
-      
-      // Supervisor name as string (not ID)
-      if (supervisorName != null && supervisorName.isNotEmpty) {
-        requestData['supervisor_name'] = supervisorName;
+
+      // ✅ Supervisor name as string (backend now supports this)
+      if (supervisorName != null && supervisorName.trim().isNotEmpty) {
+        requestData['supervisor_name'] = supervisorName.trim();
       }
 
-      print('Creating project with data: $requestData');
+      print('📤 Creating project with data: $requestData');
 
       final response = await _apiClient.post(
         ApiConfig.projectsEndpoint,
@@ -111,14 +120,19 @@ class ProjectService {
       );
 
       if (response.statusCode == 201 || response.statusCode == 200) {
-        print('Project created successfully: ${response.data}');
+        print('✅ Project created successfully!');
+        print('📥 Response data: ${response.data}');
         return Project.fromJson(response.data);
       } else {
+        print('❌ Failed to create project: ${response.statusCode}');
         throw Exception('Failed to create project: ${response.statusCode}');
       }
     } on DioException catch (e) {
-      print('Error creating project: ${e.response?.data}');
+      print('❌ Error creating project: ${e.response?.data}');
       throw _handleError(e);
+    } catch (e) {
+      print('❌ Unexpected error: $e');
+      rethrow;
     }
   }
 

@@ -14,6 +14,8 @@ class ApiConfig {
   static const String logoutEndpoint = '$apiPrefix/auth/logout/';
   static const String profileEndpoint = '$apiPrefix/auth/profile/';
   static const String changePasswordEndpoint = '$apiPrefix/auth/change-password/';
+  static const String forgotPasswordEndpoint = '$apiPrefix/auth/forgot-password/';
+  static const String resetPasswordEndpoint = '$apiPrefix/auth/reset-password/';
 
   // ✅ USERS ARE UNDER AUTH IN YOUR BACKEND
   // Faculty list:  /api/auth/faculty/

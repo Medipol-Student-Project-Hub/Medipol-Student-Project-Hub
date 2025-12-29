@@ -180,6 +180,48 @@ class AuthService {
     return await _storage.isLoggedIn();
   }
 
+  /// Request password reset
+  Future<void> forgotPassword({required String email}) async {
+    try {
+      final response = await _apiClient.post(
+        ApiConfig.forgotPasswordEndpoint,
+        data: {'email': email},
+      );
+
+      if (response.statusCode == 200) {
+        return;
+      } else {
+        throw Exception('Failed to send password reset email');
+      }
+    } on DioException catch (e) {
+      throw _handleError(e);
+    }
+  }
+
+  /// Reset password with token
+  Future<void> resetPassword({
+    required String token,
+    required String newPassword,
+  }) async {
+    try {
+      final response = await _apiClient.post(
+        ApiConfig.resetPasswordEndpoint,
+        data: {
+          'token': token,
+          'new_password': newPassword,
+        },
+      );
+
+      if (response.statusCode == 200) {
+        return;
+      } else {
+        throw Exception('Failed to reset password');
+      }
+    } on DioException catch (e) {
+      throw _handleError(e);
+    }
+  }
+
   /// Parse user from JSON
   User _parseUser(Map<String, dynamic> json) {
     final userType = json['user_type'];

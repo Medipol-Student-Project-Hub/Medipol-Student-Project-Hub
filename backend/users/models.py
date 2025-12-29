@@ -109,3 +109,48 @@ class Faculty(models.Model):
 
     def __str__(self):
         return f"{self.title} {self.user.name}" if self.title else self.user.name
+
+
+class Notification(models.Model):
+    """
+    Represents a notification for a user.
+    Simple notification system for user alerts.
+    """
+    NOTIFICATION_TYPES = (
+        ('project_invite', 'Project Invitation'),
+        ('message', 'New Message'),
+        ('join_request', 'Join Request'),
+        ('milestone', 'Milestone Update'),
+        ('task', 'Task Assignment'),
+        ('general', 'General'),
+    )
+
+    recipient = models.ForeignKey(
+        User,
+        on_delete=models.CASCADE,
+        related_name='notifications'
+    )
+    notification_type = models.CharField(max_length=50, choices=NOTIFICATION_TYPES)
+    title = models.CharField(max_length=255)
+    message = models.TextField()
+    link = models.CharField(max_length=500, blank=True)  # Deep link or URL for navigation
+    is_read = models.BooleanField(default=False)
+    created_at = models.DateTimeField(default=timezone.now)
+
+    class Meta:
+        verbose_name = 'Notification'
+        verbose_name_plural = 'Notifications'
+        ordering = ['-created_at']
+        indexes = [
+            models.Index(fields=['recipient', '-created_at']),
+            models.Index(fields=['recipient', 'is_read']),
+        ]
+
+    def __str__(self):
+        return f"{self.recipient.name} - {self.title}"
+
+    def mark_as_read(self):
+        """Mark notification as read"""
+        if not self.is_read:
+            self.is_read = True
+            self.save(update_fields=['is_read'])

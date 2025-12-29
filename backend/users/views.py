@@ -1,4 +1,4 @@
-from rest_framework import generics, status, viewsets
+from rest_framework import generics, status, viewsets, filters
 from rest_framework.decorators import action
 from rest_framework.response import Response
 from rest_framework.permissions import AllowAny, IsAuthenticated
@@ -6,11 +6,11 @@ from django.contrib.auth import get_user_model
 from rest_framework_simplejwt.tokens import RefreshToken
 from rest_framework_simplejwt.views import TokenObtainPairView
 
-from .models import Student, Faculty
+from .models import Student, Faculty, Notification
 from .serializers import (
     UserSerializer, StudentProfileSerializer, FacultyProfileSerializer,
     StudentRegistrationSerializer, FacultyRegistrationSerializer,
-    ChangePasswordSerializer
+    ChangePasswordSerializer, NotificationSerializer
 )
 from .permissions import IsOwnerOrReadOnly, IsStudent, IsFaculty
 
@@ -266,3 +266,130 @@ class ChangePasswordView(generics.UpdateAPIView):
         return Response({
             'message': 'Password changed successfully'
         }, status=status.HTTP_200_OK)
+
+
+class ForgotPasswordView(generics.GenericAPIView):
+    """
+    Request password reset email
+    POST /api/users/forgot-password/
+    Body: { "email": "user@example.com" }
+    """
+    permission_classes = [AllowAny]
+
+    def post(self, request, *args, **kwargs):
+        email = request.data.get('email')
+
+        if not email:
+            return Response(
+                {'email': 'Email is required'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        try:
+            user = User.objects.get(email=email)
+
+            # TODO: Implement actual email sending with reset token
+            # For now, we'll return success (in production, send email with token)
+            # You can use Django's built-in PasswordResetTokenGenerator
+            # from django.contrib.auth.tokens import default_token_generator
+            # token = default_token_generator.make_token(user)
+
+            # In production: Send email with reset link containing token
+            # send_mail(
+            #     subject='Password Reset Request',
+            #     message=f'Click here to reset: https://yourapp.com/reset/{token}',
+            #     from_email=settings.DEFAULT_FROM_EMAIL,
+            #     recipient_list=[email],
+            # )
+
+            return Response({
+                'message': 'Password reset instructions have been sent to your email',
+                'email': email,
+                # TODO: Remove this in production!
+                'debug_note': 'Email sending not implemented yet. In production, user would receive email.'
+            }, status=status.HTTP_200_OK)
+
+        except User.DoesNotExist:
+            # Security: Don't reveal if email exists or not
+            return Response({
+                'message': 'If an account with this email exists, password reset instructions have been sent',
+            }, status=status.HTTP_200_OK)
+
+
+class ResetPasswordView(generics.GenericAPIView):
+    """
+    Reset password with token
+    POST /api/users/reset-password/
+    Body: { "token": "...", "new_password": "..." }
+    """
+    permission_classes = [AllowAny]
+
+    def post(self, request, *args, **kwargs):
+        token = request.data.get('token')
+        new_password = request.data.get('new_password')
+
+        if not token or not new_password:
+            return Response(
+                {'error': 'Token and new password are required'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        # TODO: Implement token validation and password reset
+        # from django.contrib.auth.tokens import default_token_generator
+        # from django.utils.http import urlsafe_base64_decode
+        #
+        # try:
+        #     uid = urlsafe_base64_decode(uidb64).decode()
+        #     user = User.objects.get(pk=uid)
+        #
+        #     if default_token_generator.check_token(user, token):
+        #         user.set_password(new_password)
+        #         user.save()
+        #         return Response({'message': 'Password reset successful'})
+        #     else:
+        #         return Response({'error': 'Invalid token'}, status=400)
+        # except:
+        #     return Response({'error': 'Invalid request'}, status=400)
+
+        return Response({
+            'message': 'Password reset functionality not fully implemented yet',
+            'debug_note': 'Token validation needs to be implemented'
+        }, status=status.HTTP_501_NOT_IMPLEMENTED)
+
+
+class NotificationViewSet(viewsets.ModelViewSet):
+    """
+    ViewSet for managing notifications
+    """
+    permission_classes = [IsAuthenticated]
+    serializer_class = NotificationSerializer
+    queryset = Notification.objects.all()
+
+    def get_queryset(self):
+        """Get only notifications for the current user"""
+        return Notification.objects.filter(recipient=self.request.user)
+
+    @action(detail=False, methods=['get'])
+    def unread_count(self, request):
+        """Get count of unread notifications"""
+        count = Notification.objects.filter(
+            recipient=request.user,
+            is_read=False
+        ).count()
+        return Response({'unread_count': count})
+
+    @action(detail=True, methods=['post'])
+    def mark_as_read(self, request, pk=None):
+        """Mark a notification as read"""
+        notification = self.get_object()
+        notification.mark_as_read()
+        return Response({'status': 'notification marked as read'})
+
+    @action(detail=False, methods=['post'])
+    def mark_all_read(self, request):
+        """Mark all notifications as read for the current user"""
+        Notification.objects.filter(
+            recipient=request.user,
+            is_read=False
+        ).update(is_read=True)
+        return Response({'status': 'all notifications marked as read'})

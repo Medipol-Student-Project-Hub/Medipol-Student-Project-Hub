@@ -1,6 +1,6 @@
 from django.contrib import admin
 from django.contrib.auth.admin import UserAdmin as BaseUserAdmin
-from .models import User, Student, Faculty
+from .models import User, Student, Faculty, Notification
 
 
 @admin.register(User)
@@ -47,3 +47,21 @@ class FacultyAdmin(admin.ModelAdmin):
     def get_name(self, obj):
         return obj.user.name
     get_name.short_description = 'Name'
+
+
+@admin.register(Notification)
+class NotificationAdmin(admin.ModelAdmin):
+    list_display = ['title', 'recipient', 'notification_type', 'is_read', 'created_at']
+    list_filter = ['notification_type', 'is_read', 'created_at']
+    search_fields = ['title', 'message', 'recipient__name', 'recipient__email']
+    ordering = ['-created_at']
+    readonly_fields = ['created_at']
+
+    fieldsets = (
+        ('Notification Details', {
+            'fields': ('recipient', 'notification_type', 'title', 'message')
+        }),
+        ('Additional Info', {
+            'fields': ('link', 'is_read', 'created_at')
+        }),
+    )
