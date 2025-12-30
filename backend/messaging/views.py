@@ -120,7 +120,7 @@ class ConversationViewSet(viewsets.ModelViewSet):
 
         if conversations.exists():
             conversation = conversations.first()
-            serializer = ConversationDetailSerializer(conversation)
+            serializer = ConversationDetailSerializer(conversation, context={'request': request})
             return Response(serializer.data)
 
         # Create new conversation
@@ -135,7 +135,7 @@ class ConversationViewSet(viewsets.ModelViewSet):
         conversation = serializer.save()
 
         return Response(
-            ConversationDetailSerializer(conversation).data,
+            ConversationDetailSerializer(conversation, context={'request': request}).data,
             status=status.HTTP_201_CREATED
         )
 

@@ -52,19 +52,19 @@ class _JoinRequestsPageState extends State<JoinRequestsPage>
   }
 
   List<Map<String, dynamic>> get _sentRequests {
-    // Requests where current user is the student who sent the request
+    // Requests sent BY me (where is_sent_by_me is true)
     return _allRequests.where((r) {
-      final projectInfo = r['project_info'] as Map<String, dynamic>?;
-      final studentInfo = r['student_info'] as Map<String, dynamic>?;
-      // If there's student_info, it means this is a request sent BY someone
-      // The backend returns requests where you're either the sender or project owner
-      return studentInfo != null && projectInfo != null;
+      final isSentByMe = r['is_sent_by_me'] as bool? ?? false;
+      return isSentByMe;
     }).toList();
   }
 
   List<Map<String, dynamic>> get _receivedRequests {
-    // For now, show all requests - the backend filters appropriately
-    return _allRequests;
+    // Requests TO my projects (where is_sent_by_me is false)
+    return _allRequests.where((r) {
+      final isSentByMe = r['is_sent_by_me'] as bool? ?? false;
+      return !isSentByMe;
+    }).toList();
   }
 
   Future<void> _approveRequest(int requestId) async {

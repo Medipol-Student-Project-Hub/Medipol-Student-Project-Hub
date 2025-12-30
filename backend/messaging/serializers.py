@@ -63,14 +63,31 @@ class ConversationDetailSerializer(serializers.ModelSerializer):
     """Detailed serializer for conversation with participants"""
     participants = UserSerializer(many=True, read_only=True)
     messages = MessageSerializer(many=True, read_only=True)
+    other_participant = serializers.SerializerMethodField()
 
     class Meta:
         model = Conversation
         fields = [
-            'id', 'name', 'participants', 'is_group',
+            'id', 'name', 'participants', 'is_group', 'other_participant',
             'messages', 'created_at', 'updated_at'
         ]
         read_only_fields = ['id', 'created_at', 'updated_at']
+
+    def get_other_participant(self, obj):
+        """For one-on-one chats, get the other participant's info"""
+        if not obj.is_group:
+            user = self.context.get('request').user if self.context.get('request') else None
+            if user:
+                other_users = obj.participants.exclude(id=user.id)
+                if other_users.exists():
+                    other_user = other_users.first()
+                    return {
+                        'id': other_user.id,
+                        'name': other_user.name,
+                        'email': other_user.email,
+                        'profile_image': other_user.profile_image.url if other_user.profile_image else None
+                    }
+        return None
 
 
 class CreateConversationSerializer(serializers.Serializer):

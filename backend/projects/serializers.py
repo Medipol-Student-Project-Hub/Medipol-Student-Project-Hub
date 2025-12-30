@@ -22,12 +22,14 @@ class MilestoneSerializer(serializers.ModelSerializer):
 class JoinRequestSerializer(serializers.ModelSerializer):
     student_info = StudentProfileSerializer(source='student', read_only=True)
     project_info = serializers.SerializerMethodField()
+    is_sent_by_me = serializers.SerializerMethodField()
 
     class Meta:
         model = JoinRequest
         fields = [
             'id', 'project', 'student', 'student_info', 'project_info',
-            'request_date', 'status', 'message', 'response_message', 'response_date'
+            'request_date', 'status', 'message', 'response_message', 'response_date',
+            'is_sent_by_me'
         ]
         read_only_fields = ['id', 'request_date', 'status', 'response_date', 'student_info']
 
@@ -35,8 +37,21 @@ class JoinRequestSerializer(serializers.ModelSerializer):
         return {
             'id': obj.project.id,
             'title': obj.project.title,
-            'owner': obj.project.owner.user.name
+            'owner': obj.project.owner.user.name,
+            'owner_id': obj.project.owner.user.id
         }
+
+    def get_is_sent_by_me(self, obj):
+        """Check if this request was sent by the current user"""
+        request = self.context.get('request')
+        if request and hasattr(request, 'user'):
+            user = request.user
+            if user.user_type == 'student':
+                try:
+                    return obj.student.user.id == user.id
+                except AttributeError:
+                    pass
+        return False
 
     def validate(self, attrs):
         project = attrs.get('project')
@@ -190,11 +205,8 @@ class ProjectCreateSerializer(serializers.ModelSerializer):
             except AttributeError:
                 raise serializers.ValidationError("Student profile not found.")
         elif user.user_type == 'faculty':
-            # ✅ Faculty can create projects too!
-            # For faculty-created projects, we need to assign a student owner
-            # Option 1: Require 'owner_id' in request data
-            # Option 2: Create a placeholder or assign to first team member
-            # For now, we'll require owner_id for faculty
+            # ✅ Faculty can create projects!
+            # Faculty user becomes the supervisor, and we need a student as owner
             owner_id = self.context.get('request').data.get('owner_id')
             if owner_id:
                 try:
@@ -202,9 +214,13 @@ class ProjectCreateSerializer(serializers.ModelSerializer):
                 except Student.DoesNotExist:
                     raise serializers.ValidationError("Invalid owner_id. Student not found.")
             else:
-                raise serializers.ValidationError(
-                    "Faculty members must specify an owner_id (student) when creating a project."
-                )
+                # If no owner_id provided, use the first available student as placeholder
+                # Faculty will be set as supervisor automatically
+                owner = Student.objects.first()
+                if not owner:
+                    raise serializers.ValidationError(
+                        "No students found in system. Please create a student account first."
+                    )
         else:
             raise serializers.ValidationError("Only students and faculty can create projects.")
 

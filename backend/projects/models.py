@@ -168,14 +168,14 @@ class JoinRequest(models.Model):
             self.response_date = timezone.now()
             self.save()
 
-            # ✅ Create notification for student
-            Notification.objects.create(
-                recipient=self.student.user,
-                notification_type='join_request',
-                title='Join Request Approved! 🎉',
-                message=f'Your request to join "{self.project.title}" has been approved! Welcome to the team.',
-                link=f'/projects/{self.project.id}'
-            )
+            # ✅ Notifications disabled for now - not working well
+            # Notification.objects.create(
+            #     recipient=self.student.user,
+            #     notification_type='join_request',
+            #     title='Join Request Approved! 🎉',
+            #     message=f'Your request to join "{self.project.title}" has been approved! Welcome to the team.',
+            #     link=f'/projects/{self.project.id}'
+            # )
 
             return True
         return False
@@ -190,14 +190,14 @@ class JoinRequest(models.Model):
         self.response_date = timezone.now()
         self.save()
 
-        # ✅ Create notification for student
-        Notification.objects.create(
-            recipient=self.student.user,
-            notification_type='join_request',
-            title='Join Request Update',
-            message=f'Your request to join "{self.project.title}" was not accepted this time. Keep exploring other projects!',
-            link=f'/projects/{self.project.id}'
-        )
+        # ✅ Notifications disabled for now - not working well
+        # Notification.objects.create(
+        #     recipient=self.student.user,
+        #     notification_type='join_request',
+        #     title='Join Request Update',
+        #     message=f'Your request to join "{self.project.title}" was not accepted this time. Keep exploring other projects!',
+        #     link=f'/projects/{self.project.id}'
+        # )
 
     def clean(self):
         super().clean()

@@ -105,14 +105,14 @@ class ProjectViewSet(viewsets.ModelViewSet):
         if serializer.is_valid():
             join_request = serializer.save()
 
-            # ✅ Notify project owner about new join request
-            Notification.objects.create(
-                recipient=project.owner.user,
-                notification_type='join_request',
-                title='New Join Request! 🙋',
-                message=f'{student.user.name} wants to join your project "{project.title}"',
-                link=f'/projects/{project.id}/requests'
-            )
+            # ✅ Notifications disabled for now - not working well
+            # Notification.objects.create(
+            #     recipient=project.owner.user,
+            #     notification_type='join_request',
+            #     title='New Join Request! 🙋',
+            #     message=f'{student.user.name} wants to join your project "{project.title}"',
+            #     link=f'/projects/{project.id}/requests'
+            # )
 
             return Response(serializer.data, status=status.HTTP_201_CREATED)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
@@ -281,15 +281,34 @@ class JoinRequestViewSet(viewsets.ReadOnlyModelViewSet):
     serializer_class = JoinRequestSerializer
     permission_classes = [IsAuthenticated]
 
+    def get_serializer_context(self):
+        """Pass request context to serializer"""
+        context = super().get_serializer_context()
+        context['request'] = self.request
+        return context
+
     def get_queryset(self):
+        """
+        Return join requests where the current user is either:
+        1. The student who sent the request (for students only)
+        2. The owner of the project that received the request (students or faculty)
+        """
         user = self.request.user
 
         if user.user_type == 'student':
             try:
                 student = user.student_profile
+                # Return requests I sent OR requests to projects I own
                 return JoinRequest.objects.filter(
                     Q(student=student) | Q(project__owner=student)
-                ).distinct()
+                ).distinct().select_related('project__owner__user', 'student__user')
+            except AttributeError:
+                pass
+        elif user.user_type == 'faculty':
+            try:
+                # Faculty can only see requests to projects they supervise/own
+                # (Currently faculty can't own projects, but keeping for future)
+                return JoinRequest.objects.none()
             except AttributeError:
                 pass
 

@@ -76,18 +76,19 @@ class _HomePageState extends State<HomePage>
               );
             },
           ),
-          IconButton(
-            icon: const Icon(LucideIcons.bell),
-            tooltip: 'Notifications',
-            onPressed: () {
-              Navigator.push(
-                context,
-                MaterialPageRoute(
-                  builder: (context) => const NotificationsPage(),
-                ),
-              );
-            },
-          ),
+          // ✅ Notifications hidden - not working well yet
+          // IconButton(
+          //   icon: const Icon(LucideIcons.bell),
+          //   tooltip: 'Notifications',
+          //   onPressed: () {
+          //     Navigator.push(
+          //       context,
+          //       MaterialPageRoute(
+          //         builder: (context) => const NotificationsPage(),
+          //       ),
+          //     );
+          //   },
+          // ),
           IconButton(
             icon: const Icon(LucideIcons.messageSquare),
             tooltip: 'Messages',

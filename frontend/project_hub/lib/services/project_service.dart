@@ -177,11 +177,11 @@ class ProjectService {
   }
 
   /// Send join request
-  Future<void> sendJoinRequest(String projectId) async {
+  Future<void> sendJoinRequest(String projectId, {String message = ''}) async {
     try {
       final response = await _apiClient.post(
-        ApiConfig.joinRequestsEndpoint,
-        data: {'project': projectId},
+        '${ApiConfig.projectsEndpoint}$projectId/join/',
+        data: {'message': message},
       );
 
       if (response.statusCode != 201) {
