@@ -16,7 +16,6 @@ class _LoginPageState extends State<LoginPage> with SingleTickerProviderStateMix
   late TabController _tabController;
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
-  bool _rememberMe = false;
 
   @override
   void initState() {
@@ -178,29 +177,10 @@ class _LoginPageState extends State<LoginPage> with SingleTickerProviderStateMix
         ),
         const SizedBox(height: 16),
 
-        // Remember Me & Forgot Password
+        // Forgot Password
         Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          mainAxisAlignment: MainAxisAlignment.end,
           children: [
-            Flexible(
-              child: Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Checkbox(
-                    value: _rememberMe,
-                    onChanged: (value) {
-                      setState(() => _rememberMe = value ?? false);
-                    },
-                  ),
-                  const Flexible(
-                    child: Text(
-                      'Remember me',
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                  ),
-                ],
-              ),
-            ),
             TextButton(
               onPressed: () {
                 Navigator.push(

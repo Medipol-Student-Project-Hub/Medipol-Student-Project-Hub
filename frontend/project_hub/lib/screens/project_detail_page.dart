@@ -107,19 +107,21 @@ class _ProjectDetailPageState extends State<ProjectDetailPage> {
                       ),
                     ),
                   ],
-                  const SizedBox(height: 16),
-                  LinearProgressIndicator(
-                    value: project.progress / 100,
-                    backgroundColor: const Color(0xFFE5E7EB),
-                    valueColor: const AlwaysStoppedAnimation<Color>(Color(0xFF0EA5E9)),
-                  ),
-                  const SizedBox(height: 8),
-                  Text(
-                    '${project.progress}% Complete',
-                    style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                      color: const Color(0xFF6B7280),
+                  if (project.progress > 0) ...[
+                    const SizedBox(height: 16),
+                    LinearProgressIndicator(
+                      value: project.progress / 100,
+                      backgroundColor: const Color(0xFFE5E7EB),
+                      valueColor: const AlwaysStoppedAnimation<Color>(Color(0xFF0EA5E9)),
                     ),
-                  ),
+                    const SizedBox(height: 8),
+                    Text(
+                      '${project.progress}% Complete',
+                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                        color: const Color(0xFF6B7280),
+                      ),
+                    ),
+                  ],
                 ],
               ),
             ),
