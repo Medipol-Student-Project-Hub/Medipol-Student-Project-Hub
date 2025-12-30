@@ -209,6 +209,39 @@ class _ProjectDetailPageState extends State<ProjectDetailPage> {
                 ),
               ),
 
+            // Students Section
+            _buildSection(
+              context,
+              title: 'Students',
+              child: project.teamMembers.isEmpty
+                  ? const Padding(
+                      padding: EdgeInsets.symmetric(vertical: 8),
+                      child: Text(
+                        'No students have joined this project yet',
+                        style: TextStyle(
+                          color: Color(0xFF6B7280),
+                          fontStyle: FontStyle.italic,
+                        ),
+                      ),
+                    )
+                  : Column(
+                      children: project.teamMembers
+                          .map((member) => ListTile(
+                                contentPadding: EdgeInsets.zero,
+                                leading: CircleAvatar(
+                                  backgroundColor: const Color(0xFF0EA5E9),
+                                  child: Text(
+                                    member.name.isNotEmpty ? member.name[0].toUpperCase() : '?',
+                                    style: const TextStyle(color: Colors.white),
+                                  ),
+                                ),
+                                title: Text(member.name.isNotEmpty ? member.name : 'Team Member'),
+                                subtitle: Text(member.role),
+                              ))
+                          .toList(),
+                    ),
+            ),
+
             // Supervisor
             if (project.supervisor != null && project.supervisor!.isNotEmpty)
               _buildSection(
@@ -222,29 +255,6 @@ class _ProjectDetailPageState extends State<ProjectDetailPage> {
                   ),
                   title: Text(project.supervisor!),
                   subtitle: const Text('Project Advisor'),
-                ),
-              ),
-
-            // Team Members
-            if (project.teamMembers.isNotEmpty)
-              _buildSection(
-                context,
-                title: 'Current Team',
-                child: Column(
-                  children: project.teamMembers
-                      .map((member) => ListTile(
-                            contentPadding: EdgeInsets.zero,
-                            leading: CircleAvatar(
-                              backgroundColor: const Color(0xFF0EA5E9),
-                              child: Text(
-                                member.name.isNotEmpty ? member.name[0].toUpperCase() : '?',
-                                style: const TextStyle(color: Colors.white),
-                              ),
-                            ),
-                            title: Text(member.name.isNotEmpty ? member.name : 'Team Member'),
-                            subtitle: Text(member.role),
-                          ))
-                      .toList(),
                 ),
               ),
 

@@ -212,8 +212,8 @@ class AuthService {
     try {
       final userType = await _storage.getUserType();
       final endpoint = userType == 'student'
-          ? '${ApiConfig.baseUrl}/students/update_profile/'
-          : '${ApiConfig.baseUrl}/faculty/update_profile/';
+          ? '${ApiConfig.studentsEndpoint}update_profile/'
+          : '${ApiConfig.facultyEndpoint}update_profile/';
 
       final response = await _apiClient.patch(endpoint, data: data);
 
