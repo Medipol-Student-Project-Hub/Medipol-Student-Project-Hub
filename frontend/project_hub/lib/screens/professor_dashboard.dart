@@ -3,10 +3,35 @@ import 'package:lucide_icons_flutter/lucide_icons.dart';
 import 'package:provider/provider.dart';
 
 import '../models/user.dart';
+import '../models/project.dart';
 import '../providers/auth_provider.dart';
+import '../providers/project_provider.dart';
 
-class ProfessorDashboard extends StatelessWidget {
+class ProfessorDashboard extends StatefulWidget {
   const ProfessorDashboard({super.key});
+
+  @override
+  State<ProfessorDashboard> createState() => _ProfessorDashboardState();
+}
+
+class _ProfessorDashboardState extends State<ProfessorDashboard> {
+  List<Project> _supervisedProjects = [];
+  bool _isLoading = true;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadSupervisedProjects();
+  }
+
+  Future<void> _loadSupervisedProjects() async {
+    final projectProvider = Provider.of<ProjectProvider>(context, listen: false);
+    await projectProvider.loadMyProjects(); // This fetches supervised projects for faculty
+    setState(() {
+      _supervisedProjects = projectProvider.myProjects;
+      _isLoading = false;
+    });
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -75,117 +100,198 @@ class ProfessorDashboard extends StatelessWidget {
             ),
             const SizedBox(height: 16),
 
-            // Contact Information
-            Container(
-              margin: const EdgeInsets.symmetric(horizontal: 16),
-              padding: const EdgeInsets.all(16),
-              decoration: BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.circular(12),
-                border: Border.all(color: const Color(0xFFE5E7EB)),
+            // Statistics Cards
+            if (!_isLoading)
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 16),
+                child: _buildStatisticsGrid(context),
               ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    'Contact Information',
-                    style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                      fontWeight: FontWeight.bold,
-                    ),
+
+            const SizedBox(height: 24),
+
+            // Supervised Projects
+            if (!_isLoading)
+              _buildSection(
+                context,
+                title: 'Supervised Projects',
+                child: _supervisedProjects.isEmpty
+                    ? const Padding(
+                        padding: EdgeInsets.all(16),
+                        child: Text(
+                          'No supervised projects yet',
+                          style: TextStyle(color: Color(0xFF6B7280)),
+                        ),
+                      )
+                    : Column(
+                        children: _supervisedProjects
+                            .map((project) => _buildProjectCard(context, project))
+                            .toList(),
+                      ),
+              ),
+
+            const SizedBox(height: 16),
+
+            // Account/Logout Section
+            _buildSection(
+              context,
+              title: 'Account',
+              child: SizedBox(
+                width: double.infinity,
+                child: OutlinedButton.icon(
+                  onPressed: () async {
+                    await context.read<AuthProvider>().logout();
+                    if (!context.mounted) return;
+                    Navigator.pushNamedAndRemoveUntil(
+                      context,
+                      '/welcome',
+                      (route) => false,
+                    );
+                  },
+                  icon: const Icon(Icons.logout, color: Colors.red),
+                  label: const Text('Log out', style: TextStyle(color: Colors.red)),
+                  style: OutlinedButton.styleFrom(
+                    side: const BorderSide(color: Colors.red),
+                    padding: const EdgeInsets.symmetric(vertical: 12),
                   ),
-                  const SizedBox(height: 16),
-                  _buildInfoRow(context, 'Email', faculty?.email ?? ''),
-                  _buildInfoRow(context, 'Department', department),
-                  if (faculty?.officeLocation != null && faculty!.officeLocation.isNotEmpty)
-                    _buildInfoRow(context, 'Office', faculty.officeLocation),
-                  _buildInfoRow(context, 'Experience', experience),
-                ],
+                ),
               ),
             ),
 
             const SizedBox(height: 16),
+          ],
+        ),
+      ),
+    );
+  }
 
-            // Specialization
-            if (faculty?.specialization != null && faculty!.specialization.isNotEmpty)
-              Container(
-                margin: const EdgeInsets.symmetric(horizontal: 16),
-                padding: const EdgeInsets.all(16),
-                decoration: BoxDecoration(
-                  color: Colors.white,
-                  borderRadius: BorderRadius.circular(12),
-                  border: Border.all(color: const Color(0xFFE5E7EB)),
-                ),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      'Specialization',
-                      style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                    const SizedBox(height: 16),
-                    Wrap(
-                      spacing: 8,
-                      runSpacing: 8,
-                      children: faculty.specialization
-                          .map((spec) => Chip(
-                                label: Text(spec),
-                                backgroundColor: const Color.fromRGBO(14, 165, 233, 0.1),
-                                labelStyle: const TextStyle(color: Color(0xFF0EA5E9)),
-                              ))
-                          .toList(),
-                    ),
-                  ],
-                ),
-              ),
+  Widget _buildStatisticsGrid(BuildContext context) {
+    // Calculate real statistics
+    final activeProjects = _supervisedProjects.where((p) => p.status != 'Completed').length;
+    final completedProjects = _supervisedProjects.where((p) => p.status == 'Completed').length;
 
-            const SizedBox(height: 16),
+    // Count unique students across all supervised projects
+    final allStudents = <String>{};
+    for (var project in _supervisedProjects) {
+      allStudents.addAll(project.teamMembers.map((m) => m.name));
+    }
 
-            // Logout Button
-            Container(
-              margin: const EdgeInsets.symmetric(horizontal: 16),
-              padding: const EdgeInsets.all(16),
-              decoration: BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.circular(12),
-                border: Border.all(color: const Color(0xFFE5E7EB)),
-              ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    'Account',
-                    style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                  const SizedBox(height: 16),
-                  SizedBox(
-                    width: double.infinity,
-                    child: OutlinedButton.icon(
-                      onPressed: () async {
-                        await context.read<AuthProvider>().logout();
-                        if (!context.mounted) return;
-                        Navigator.pushNamedAndRemoveUntil(
-                          context,
-                          '/welcome',
-                          (route) => false,
-                        );
-                      },
-                      icon: const Icon(Icons.logout, color: Colors.red),
-                      label: const Text('Logout', style: TextStyle(color: Colors.red)),
-                      style: OutlinedButton.styleFrom(
-                        side: const BorderSide(color: Colors.red),
-                        padding: const EdgeInsets.symmetric(vertical: 12),
-                      ),
-                    ),
-                  ),
-                ],
-              ),
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        if (constraints.maxWidth > 600) {
+          return Row(
+            children: [
+              Expanded(child: _buildStatCard(context, LucideIcons.folderOpen, '$activeProjects', 'Active Projects', const Color(0xFF0EA5E9))),
+              const SizedBox(width: 12),
+              Expanded(child: _buildStatCard(context, LucideIcons.users, '${allStudents.length}', 'Total Students', const Color(0xFF10B981))),
+              const SizedBox(width: 12),
+              Expanded(child: _buildStatCard(context, LucideIcons.clock, '0', 'Pending Reviews', const Color(0xFFF59E0B))),
+              const SizedBox(width: 12),
+              Expanded(child: _buildStatCard(context, LucideIcons.circleCheck, '$completedProjects', 'Completed', const Color(0xFF8B5CF6))),
+            ],
+          );
+        }
+        return Column(
+          children: [
+            Row(
+              children: [
+                Expanded(child: _buildStatCard(context, LucideIcons.folderOpen, '$activeProjects', 'Active Projects', const Color(0xFF0EA5E9))),
+                const SizedBox(width: 12),
+                Expanded(child: _buildStatCard(context, LucideIcons.users, '${allStudents.length}', 'Total Students', const Color(0xFF10B981))),
+              ],
             ),
+            const SizedBox(height: 12),
+            Row(
+              children: [
+                Expanded(child: _buildStatCard(context, LucideIcons.clock, '0', 'Pending Reviews', const Color(0xFFF59E0B))),
+                const SizedBox(width: 12),
+                Expanded(child: _buildStatCard(context, LucideIcons.circleCheck, '$completedProjects', 'Completed', const Color(0xFF8B5CF6))),
+              ],
+            ),
+          ],
+        );
+      },
+    );
+  }
 
-            const SizedBox(height: 16),
+  Widget _buildStatCard(BuildContext context, IconData icon, String value, String label, Color color) {
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: const Color(0xFFE5E7EB)),
+      ),
+      child: Column(
+        children: [
+          Icon(icon, color: color, size: 32),
+          const SizedBox(height: 8),
+          Text(
+            value,
+            style: Theme.of(context).textTheme.headlineMedium?.copyWith(
+              fontWeight: FontWeight.bold,
+              color: color,
+            ),
+          ),
+          const SizedBox(height: 4),
+          Text(
+            label,
+            style: Theme.of(context).textTheme.bodySmall?.copyWith(
+              color: const Color(0xFF6B7280),
+            ),
+            textAlign: TextAlign.center,
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildProjectCard(BuildContext context, Project project) {
+    return Card(
+      margin: const EdgeInsets.only(bottom: 12),
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Expanded(
+                  child: Text(
+                    project.title,
+                    style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+                  ),
+                ),
+                if (project.category.isNotEmpty)
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFF3F4F6),
+                      borderRadius: BorderRadius.circular(4),
+                    ),
+                    child: Text(project.category, style: const TextStyle(fontSize: 12)),
+                  ),
+              ],
+            ),
+            const SizedBox(height: 8),
+            if (project.teamMembers.isNotEmpty)
+              Text(
+                'Students: ${project.teamMembers.map((m) => m.name).join(', ')}',
+                style: const TextStyle(color: Color(0xFF6B7280)),
+              ),
+            const SizedBox(height: 8),
+            LinearProgressIndicator(
+              value: project.progress / 100,
+              backgroundColor: const Color(0xFFE5E7EB),
+              valueColor: const AlwaysStoppedAnimation<Color>(Color(0xFF0EA5E9)),
+            ),
+            const SizedBox(height: 8),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Text('${project.progress}% Complete', style: const TextStyle(fontSize: 12, color: Color(0xFF6B7280))),
+                Text('Team: ${project.teamSizeDisplay}', style: const TextStyle(fontSize: 12, color: Color(0xFF6B7280))),
+              ],
+            ),
           ],
         ),
       ),
@@ -212,33 +318,6 @@ class ProfessorDashboard extends StatelessWidget {
           ),
           const SizedBox(height: 16),
           child,
-        ],
-      ),
-    );
-  }
-
-  Widget _buildInfoRow(BuildContext context, String label, String value) {
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 12),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          SizedBox(
-            width: 100,
-            child: Text(
-              label,
-              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                color: const Color(0xFF6B7280),
-                fontWeight: FontWeight.w500,
-              ),
-            ),
-          ),
-          Expanded(
-            child: Text(
-              value.isNotEmpty ? value : '-',
-              style: Theme.of(context).textTheme.bodyMedium,
-            ),
-          ),
         ],
       ),
     );
