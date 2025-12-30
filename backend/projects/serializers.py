@@ -58,17 +58,17 @@ class JoinRequestSerializer(serializers.ModelSerializer):
         student = attrs.get('student')
 
         if student == project.owner:
-            raise serializers.ValidationError("You cannot send a join request to your own project.")
+            raise serializers.ValidationError({"error": "You cannot send a join request to your own project."})
 
         existing = JoinRequest.objects.filter(
             project=project,
             student=student
         ).exclude(status='rejected').exists()
         if existing:
-            raise serializers.ValidationError("You have already sent a request to this project.")
+            raise serializers.ValidationError({"error": "You have already sent a join request to this project."})
 
         if not project.can_accept_members():
-            raise serializers.ValidationError("This project's team is already full.")
+            raise serializers.ValidationError({"error": "This project's team is already full."})
 
         return attrs
 

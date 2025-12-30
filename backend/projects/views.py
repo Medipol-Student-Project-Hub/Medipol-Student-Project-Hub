@@ -15,7 +15,6 @@ from .permissions import (
     IsProjectOwnerOrReadOnly, IsProjectOwner,
     IsFacultyOrReadOnly, CanManageJoinRequest
 )
-from users.permissions import IsStudent
 
 
 class ProjectViewSet(viewsets.ModelViewSet):
@@ -27,8 +26,8 @@ class ProjectViewSet(viewsets.ModelViewSet):
     def get_permissions(self):
         if self.action in ['list', 'retrieve']:
             return []  # No authentication required for viewing
-        elif self.action == 'create':
-            return [IsAuthenticated()]  # Only authentication required for creation
+        elif self.action in ['create', 'join']:
+            return [IsAuthenticated()]  # Only authentication required for creation and joining
         else:
             return [IsAuthenticated(), IsProjectOwnerOrReadOnly()]  # Authentication + ownership for update/delete
 
@@ -79,7 +78,7 @@ class ProjectViewSet(viewsets.ModelViewSet):
     def perform_create(self, serializer):
         serializer.save()
 
-    @action(detail=True, methods=['post'], permission_classes=[IsAuthenticated, IsStudent])
+    @action(detail=True, methods=['post'], permission_classes=[IsAuthenticated])
     def join(self, request, pk=None):
         from users.models import Notification
 

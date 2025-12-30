@@ -16,6 +16,31 @@ class ProjectDetailPage extends StatefulWidget {
 
 class _ProjectDetailPageState extends State<ProjectDetailPage> {
   bool _hasRequestedJoin = false;
+  bool _isCheckingRequest = true;
+
+  @override
+  void initState() {
+    super.initState();
+    _checkExistingRequest();
+  }
+
+  Future<void> _checkExistingRequest() async {
+    try {
+      final projectProvider = Provider.of<ProjectProvider>(context, listen: false);
+      final authProvider = Provider.of<AuthProvider>(context, listen: false);
+
+      if (authProvider.userType != 'student') {
+        setState(() => _isCheckingRequest = false);
+        return;
+      }
+
+      // Check if user already sent a request by trying to fetch join requests
+      // This will be handled by the error message when they try to join
+      setState(() => _isCheckingRequest = false);
+    } catch (e) {
+      setState(() => _isCheckingRequest = false);
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -209,39 +234,6 @@ class _ProjectDetailPageState extends State<ProjectDetailPage> {
                 ),
               ),
 
-            // Students Section
-            _buildSection(
-              context,
-              title: 'Students',
-              child: project.teamMembers.isEmpty
-                  ? const Padding(
-                      padding: EdgeInsets.symmetric(vertical: 8),
-                      child: Text(
-                        'No students have joined this project yet',
-                        style: TextStyle(
-                          color: Color(0xFF6B7280),
-                          fontStyle: FontStyle.italic,
-                        ),
-                      ),
-                    )
-                  : Column(
-                      children: project.teamMembers
-                          .map((member) => ListTile(
-                                contentPadding: EdgeInsets.zero,
-                                leading: CircleAvatar(
-                                  backgroundColor: const Color(0xFF0EA5E9),
-                                  child: Text(
-                                    member.name.isNotEmpty ? member.name[0].toUpperCase() : '?',
-                                    style: const TextStyle(color: Colors.white),
-                                  ),
-                                ),
-                                title: Text(member.name.isNotEmpty ? member.name : 'Team Member'),
-                                subtitle: Text(member.role),
-                              ))
-                          .toList(),
-                    ),
-            ),
-
             // Supervisor
             if (project.supervisor != null && project.supervisor!.isNotEmpty)
               _buildSection(
@@ -397,10 +389,21 @@ class _ProjectDetailPageState extends State<ProjectDetailPage> {
                     ),
                   );
                 } else {
+                  String errorMessage = projectProvider.error ?? 'Failed to send join request';
+
+                  // Check for specific error messages
+                  if (errorMessage.contains('already sent')) {
+                    errorMessage = 'You have already sent a join request to this project';
+                    setState(() {
+                      _hasRequestedJoin = true;
+                    });
+                  }
+
                   ScaffoldMessenger.of(context).showSnackBar(
                     SnackBar(
-                      content: Text(projectProvider.error ?? 'Failed to send join request'),
-                      backgroundColor: Colors.red,
+                      content: Text(errorMessage),
+                      backgroundColor: Colors.orange,
+                      duration: const Duration(seconds: 4),
                     ),
                   );
                 }
