@@ -4,11 +4,20 @@ import 'api_config.dart';
 import 'storage_service.dart';
 import '../models/user.dart';
 
+/// Service for handling user authentication and registration.
+///
+/// Manages login, registration, logout, and token refresh operations.
+/// Uses JWT tokens stored in secure local storage.
 class AuthService {
   final ApiClient _apiClient = ApiClient();
   final StorageService _storage = StorageService();
 
-  /// Login user
+  /// Authenticate user with email and password.
+  ///
+  /// Sends credentials to the backend and stores JWT tokens on success.
+  /// Returns the authenticated User object with profile data.
+  ///
+  /// Throws an exception if login fails or network error occurs.
   Future<User> login({
     required String email,
     required String password,
@@ -26,6 +35,7 @@ class AuthService {
       if (response.statusCode == 200) {
         final data = response.data;
 
+        // Store authentication tokens and user info in secure storage
         await _storage.saveAuthData(
           accessToken: data['access'],
           refreshToken: data['refresh'],
@@ -43,7 +53,16 @@ class AuthService {
     }
   }
 
-  /// Register student
+  /// Create a new student account.
+  ///
+  /// Registers a student with required academic information.
+  /// Automatically logs in the user and stores auth tokens on success.
+  ///
+  /// Optional parameters:
+  /// - faculty: Academic faculty/school name
+  /// - skills: List of technical or academic skills
+  ///
+  /// Throws an exception if registration fails or email already exists.
   Future<User> registerStudent({
     required String email,
     required String password,
@@ -65,6 +84,7 @@ class AuthService {
           'student_id': studentId,
           'department': department,
           'year': year,
+          // Include optional fields only if provided
           if (faculty != null) 'faculty': faculty,
           if (skills != null) 'skills': skills,
         },
@@ -73,6 +93,7 @@ class AuthService {
       if (response.statusCode == 201) {
         final data = response.data;
 
+        // Save auth tokens for automatic login
         await _storage.saveAuthData(
           accessToken: data['access'],
           refreshToken: data['refresh'],

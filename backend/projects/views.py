@@ -18,55 +18,105 @@ from .permissions import (
 
 
 class ProjectViewSet(viewsets.ModelViewSet):
+    """
+    API endpoints for project management.
+
+    Provides CRUD operations for projects along with additional actions like:
+    - Sending join requests
+    - Managing project team requests
+    - Adding milestones
+    - Closing projects
+
+    Permission system:
+    - list/retrieve: No authentication required (public browsing)
+    - create/join: Authentication required
+    - update/delete: Authentication + project ownership required
+    """
+    # Enable search and ordering
     filter_backends = [filters.SearchFilter, filters.OrderingFilter]
     search_fields = ['title', 'description', 'category', 'tags']
     ordering_fields = ['posted_date', 'title', 'status']
-    ordering = ['-posted_date']
+    ordering = ['-posted_date']  # Default: newest first
 
     def get_permissions(self):
+        """
+        Set different permission requirements based on the action.
+
+        - list/retrieve: Public access (no auth required)
+        - create/join: Authenticated users only
+        - update/delete: Must be the project owner
+        """
         if self.action in ['list', 'retrieve']:
-            return []  # No authentication required for viewing
+            return []  # Public browsing allowed
         elif self.action in ['create', 'join']:
-            return [IsAuthenticated()]  # Only authentication required for creation and joining
+            return [IsAuthenticated()]  # Must be logged in
         else:
-            return [IsAuthenticated(), IsProjectOwnerOrReadOnly()]  # Authentication + ownership for update/delete
+            return [IsAuthenticated(), IsProjectOwnerOrReadOnly()]  # Must own the project
 
     def get_queryset(self):
+        """
+        Get filtered project queryset based on query parameters.
+
+        Supported filters:
+        - category: Filter by project category (web, mobile, ai, etc.)
+        - status: Filter by project status (draft, in_progress, completed)
+        - skills: Filter by required skills (comma-separated)
+        - my_projects: Show only projects owned by current student
+        - supervised: Show only projects supervised by current faculty
+
+        Uses select_related and prefetch_related for query optimization.
+        """
+        # Optimize database queries by loading related data upfront
         queryset = Project.objects.select_related(
             'owner__user', 'supervisor__user'
         ).prefetch_related('milestones', 'team__members')
 
+        # Filter by category (e.g., ?category=web)
         category = self.request.query_params.get('category')
         if category:
             queryset = queryset.filter(category=category)
 
+        # Filter by status (e.g., ?status=in_progress)
         status_filter = self.request.query_params.get('status')
         if status_filter:
             queryset = queryset.filter(status=status_filter)
 
+        # Filter by required skills (e.g., ?skills=Python,Django)
         skills = self.request.query_params.get('skills')
         if skills:
             skill_list = skills.split(',')
             for skill in skill_list:
                 queryset = queryset.filter(required_skills__contains=skill.strip())
 
+        # Show only projects owned by the current student
         if self.request.query_params.get('my_projects') == 'true':
             try:
                 student = self.request.user.student_profile
                 queryset = queryset.filter(owner=student)
             except AttributeError:
+                # User is not a student, return empty queryset
                 queryset = queryset.none()
 
+        # Show only projects supervised by the current faculty member
         if self.request.query_params.get('supervised') == 'true':
             try:
                 faculty = self.request.user.faculty_profile
                 queryset = queryset.filter(supervisor=faculty)
             except AttributeError:
+                # User is not faculty, return empty queryset
                 queryset = queryset.none()
 
         return queryset
 
     def get_serializer_class(self):
+        """
+        Use different serializers for different actions to optimize data transfer.
+
+        - list: Lightweight serializer for browsing
+        - create: Serializer with creation-specific validation
+        - update/partial_update: Serializer with update-specific validation
+        - retrieve: Detailed serializer with all relations
+        """
         if self.action == 'list':
             return ProjectListSerializer
         elif self.action == 'create':
@@ -76,14 +126,27 @@ class ProjectViewSet(viewsets.ModelViewSet):
         return ProjectDetailSerializer
 
     def perform_create(self, serializer):
+        """Save the project with the current user as owner."""
         serializer.save()
 
     @action(detail=True, methods=['post'], permission_classes=[IsAuthenticated])
     def join(self, request, pk=None):
+        """
+        Send a join request to a project.
+
+        Only students can send join requests. The serializer validates:
+        - Student cannot join their own project
+        - Student hasn't already sent a request
+        - Team is not full
+
+        URL: POST /api/projects/{id}/join/
+        Permissions: Authenticated users only
+        """
         from users.models import Notification
 
         project = self.get_object()
 
+        # Verify the user is a student
         try:
             student = request.user.student_profile
         except AttributeError:
@@ -92,6 +155,7 @@ class ProjectViewSet(viewsets.ModelViewSet):
                 status=status.HTTP_403_FORBIDDEN
             )
 
+        # Create the join request
         serializer = JoinRequestSerializer(
             data={
                 'project': project.id,
@@ -104,11 +168,11 @@ class ProjectViewSet(viewsets.ModelViewSet):
         if serializer.is_valid():
             join_request = serializer.save()
 
-            # ✅ Notifications disabled for now - not working well
+            # TODO: Re-enable when notification system is fixed
             # Notification.objects.create(
             #     recipient=project.owner.user,
             #     notification_type='join_request',
-            #     title='New Join Request! 🙋',
+            #     title='New Join Request!',
             #     message=f'{student.user.name} wants to join your project "{project.title}"',
             #     link=f'/projects/{project.id}/requests'
             # )
@@ -118,18 +182,32 @@ class ProjectViewSet(viewsets.ModelViewSet):
 
     @action(detail=True, methods=['get'], permission_classes=[IsAuthenticated, IsProjectOwner])
     def requests(self, request, pk=None):
+        """
+        Get all join requests for a project.
+
+        URL: GET /api/projects/{id}/requests/
+        Permissions: Project owner only
+        Query params: ?status=pending|approved|rejected
+        """
         project = self.get_object()
         join_requests = project.join_requests.select_related('student__user').all()
 
+        # Optional filter by status
         status_filter = request.query_params.get('status')
         if status_filter:
             join_requests = join_requests.filter(status=status_filter)
 
-        serializer = JoinRequestSerializer(join_requests, many=True)
+        serializer = JoinRequestSerializer(join_requests, many=True, context={'request': request})
         return Response(serializer.data)
 
     @action(detail=True, methods=['post'], permission_classes=[IsAuthenticated, IsProjectOwner])
     def close(self, request, pk=None):
+        """
+        Mark a project as completed.
+
+        URL: POST /api/projects/{id}/close/
+        Permissions: Project owner only
+        """
         project = self.get_object()
         project.close_project()
         return Response({
@@ -139,6 +217,12 @@ class ProjectViewSet(viewsets.ModelViewSet):
 
     @action(detail=True, methods=['get'])
     def milestones(self, request, pk=None):
+        """
+        Get all milestones for a project.
+
+        URL: GET /api/projects/{id}/milestones/
+        Permissions: Public
+        """
         project = self.get_object()
         milestones = project.milestones.all()
         serializer = MilestoneSerializer(milestones, many=True)
@@ -146,6 +230,12 @@ class ProjectViewSet(viewsets.ModelViewSet):
 
     @action(detail=True, methods=['post'], permission_classes=[IsAuthenticated, IsProjectOwner])
     def add_milestone(self, request, pk=None):
+        """
+        Add a new milestone to a project.
+
+        URL: POST /api/projects/{id}/add_milestone/
+        Permissions: Project owner only
+        """
         project = self.get_object()
         serializer = MilestoneSerializer(data={**request.data, 'project': project.id})
 
@@ -156,13 +246,24 @@ class ProjectViewSet(viewsets.ModelViewSet):
 
     @action(detail=True, methods=['get', 'post'], permission_classes=[IsAuthenticated, IsFacultyOrReadOnly])
     def feedback(self, request, pk=None):
+        """
+        Get or create feedback for a project.
+
+        GET: Returns all feedback for the project (anyone can view)
+        POST: Add new feedback (faculty only)
+
+        URL: GET/POST /api/projects/{id}/feedback/
+        Permissions: Faculty only for POST, public for GET
+        """
         project = self.get_object()
 
+        # GET: Return all feedback
         if request.method == 'GET':
             feedbacks = project.feedbacks.select_related('faculty__user').all()
             serializer = FeedbackSerializer(feedbacks, many=True)
             return Response(serializer.data)
 
+        # POST: Create new feedback (faculty only)
         try:
             faculty = request.user.faculty_profile
         except AttributeError:
@@ -182,9 +283,18 @@ class ProjectViewSet(viewsets.ModelViewSet):
 
     @action(detail=True, methods=['get'])
     def progress(self, request, pk=None):
+        """
+        Calculate project progress based on completed milestones.
+
+        Returns the percentage of milestones that have been completed.
+
+        URL: GET /api/projects/{id}/progress/
+        Permissions: Public
+        """
         project = self.get_object()
         milestones = project.milestones.all()
 
+        # Calculate progress percentage
         total_milestones = milestones.count()
         completed_milestones = milestones.filter(is_completed=True).count()
         progress_percentage = (completed_milestones / total_milestones * 100) if total_milestones > 0 else 0

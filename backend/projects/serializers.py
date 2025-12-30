@@ -4,6 +4,11 @@ from users.serializers import StudentProfileSerializer, FacultyProfileSerializer
 
 
 class MilestoneSerializer(serializers.ModelSerializer):
+    """
+    Serializer for project milestones.
+
+    Handles validation to ensure due dates are in the future for new milestones.
+    """
     class Meta:
         model = Milestone
         fields = [
@@ -13,6 +18,10 @@ class MilestoneSerializer(serializers.ModelSerializer):
         read_only_fields = ['id', 'completed_date', 'created_at', 'updated_at']
 
     def validate_due_date(self, value):
+        """
+        Validation: New milestones must have future due dates.
+        Updates to existing milestones can keep past dates.
+        """
         from django.utils import timezone
         if not self.instance and value < timezone.now().date():
             raise serializers.ValidationError("Milestone due date must be in the future.")
@@ -20,6 +29,13 @@ class MilestoneSerializer(serializers.ModelSerializer):
 
 
 class JoinRequestSerializer(serializers.ModelSerializer):
+    """
+    Serializer for join requests.
+
+    Includes nested student and project info for display.
+    Validates that students can only send valid join requests.
+    """
+    # Include full student profile data in responses
     student_info = StudentProfileSerializer(source='student', read_only=True)
     project_info = serializers.SerializerMethodField()
     is_sent_by_me = serializers.SerializerMethodField()
@@ -34,6 +50,7 @@ class JoinRequestSerializer(serializers.ModelSerializer):
         read_only_fields = ['id', 'request_date', 'status', 'response_date', 'student_info']
 
     def get_project_info(self, obj):
+        """Return basic project info for the join request."""
         return {
             'id': obj.project.id,
             'title': obj.project.title,
@@ -42,7 +59,10 @@ class JoinRequestSerializer(serializers.ModelSerializer):
         }
 
     def get_is_sent_by_me(self, obj):
-        """Check if this request was sent by the current user"""
+        """
+        Check if this request was sent by the current user.
+        Used in the frontend to determine if the request can be cancelled.
+        """
         request = self.context.get('request')
         if request and hasattr(request, 'user'):
             user = request.user
@@ -54,12 +74,21 @@ class JoinRequestSerializer(serializers.ModelSerializer):
         return False
 
     def validate(self, attrs):
+        """
+        Validation rules for join requests:
+        1. Students cannot join their own projects
+        2. No duplicate requests (except after rejection)
+        3. Team must have available slots
+        """
         project = attrs.get('project')
         student = attrs.get('student')
 
+        # Rule 1: Prevent self-join
         if student == project.owner:
             raise serializers.ValidationError({"error": "You cannot send a join request to your own project."})
 
+        # Rule 2: Prevent duplicate requests
+        # Allow new requests only if previous ones were rejected
         existing = JoinRequest.objects.filter(
             project=project,
             student=student
@@ -67,6 +96,7 @@ class JoinRequestSerializer(serializers.ModelSerializer):
         if existing:
             raise serializers.ValidationError({"error": "You have already sent a join request to this project."})
 
+        # Rule 3: Check team capacity
         if not project.can_accept_members():
             raise serializers.ValidationError({"error": "This project's team is already full."})
 

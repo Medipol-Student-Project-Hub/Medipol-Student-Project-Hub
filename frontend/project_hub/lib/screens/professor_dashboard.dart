@@ -7,6 +7,12 @@ import '../models/project.dart';
 import '../providers/auth_provider.dart';
 import '../providers/project_provider.dart';
 
+/// Professor dashboard screen showing supervised projects and statistics.
+///
+/// Displays real-time data including:
+/// - Active and completed project counts
+/// - Total students across all supervised projects
+/// - List of supervised projects with team members and progress
 class ProfessorDashboard extends StatefulWidget {
   const ProfessorDashboard({super.key});
 
@@ -15,6 +21,7 @@ class ProfessorDashboard extends StatefulWidget {
 }
 
 class _ProfessorDashboardState extends State<ProfessorDashboard> {
+  // List of projects supervised by this faculty member
   List<Project> _supervisedProjects = [];
   bool _isLoading = true;
 
@@ -24,9 +31,11 @@ class _ProfessorDashboardState extends State<ProfessorDashboard> {
     _loadSupervisedProjects();
   }
 
+  /// Load all projects supervised by the current faculty member from the API.
   Future<void> _loadSupervisedProjects() async {
     final projectProvider = Provider.of<ProjectProvider>(context, listen: false);
-    await projectProvider.loadMyProjects(); // This fetches supervised projects for faculty
+    // For faculty, loadMyProjects fetches supervised projects
+    await projectProvider.loadMyProjects();
     setState(() {
       _supervisedProjects = projectProvider.myProjects;
       _isLoading = false;
@@ -164,12 +173,20 @@ class _ProfessorDashboardState extends State<ProfessorDashboard> {
     );
   }
 
+  /// Build the statistics grid showing key metrics.
+  ///
+  /// Calculates and displays:
+  /// - Active projects (not completed)
+  /// - Total unique students across all projects
+  /// - Pending reviews (placeholder - not implemented yet)
+  /// - Completed projects
   Widget _buildStatisticsGrid(BuildContext context) {
-    // Calculate real statistics
+    // Calculate project status counts
     final activeProjects = _supervisedProjects.where((p) => p.status != 'Completed').length;
     final completedProjects = _supervisedProjects.where((p) => p.status == 'Completed').length;
 
     // Count unique students across all supervised projects
+    // Using a Set to automatically handle duplicates
     final allStudents = <String>{};
     for (var project in _supervisedProjects) {
       allStudents.addAll(project.teamMembers.map((m) => m.name));
