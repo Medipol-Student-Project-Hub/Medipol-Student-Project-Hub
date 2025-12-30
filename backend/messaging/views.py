@@ -85,7 +85,7 @@ class ConversationViewSet(viewsets.ModelViewSet):
                 status=status.HTTP_403_FORBIDDEN
             )
 
-        messages = conversation.messages.all().order_by('-created_at')  # Newest first
+        messages = conversation.messages.all().order_by('created_at')  # Oldest first for chat display
 
         # Apply pagination
         page = self.paginate_queryset(messages)

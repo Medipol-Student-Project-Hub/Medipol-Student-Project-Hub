@@ -370,8 +370,13 @@ class _MessagingPageState extends State<MessagingPage> {
               setState(() => _selectedConversation = conversation);
               await messageProvider.loadMessages(conversation.id);
 
-              if (mounted && _scrollController.hasClients) {
-                _scrollController.jumpTo(0);
+              // Scroll to bottom (newest messages)
+              if (mounted) {
+                WidgetsBinding.instance.addPostFrameCallback((_) {
+                  if (_scrollController.hasClients) {
+                    _scrollController.jumpTo(_scrollController.position.maxScrollExtent);
+                  }
+                });
               }
             },
           );
@@ -422,10 +427,11 @@ class _MessagingPageState extends State<MessagingPage> {
                   : ListView.builder(
                       controller: _scrollController,
                       padding: const EdgeInsets.all(16),
-                      reverse: true,
                       itemCount: messages.length,
                       itemBuilder: (context, index) {
-                        final message = messages[messages.length - 1 - index];
+                        // Messages are ordered oldest-first from API
+                        // So oldest at top, newest at bottom
+                        final message = messages[index];
                         return _buildMessageBubble(message);
                       },
                     ),
@@ -480,13 +486,16 @@ class _MessagingPageState extends State<MessagingPage> {
                       if (!mounted) return;
 
                       if (ok) {
-                        if (_scrollController.hasClients) {
-                          _scrollController.animateTo(
-                            0,
-                            duration: const Duration(milliseconds: 300),
-                            curve: Curves.easeOut,
-                          );
-                        }
+                        // Scroll to bottom to show new message
+                        WidgetsBinding.instance.addPostFrameCallback((_) {
+                          if (_scrollController.hasClients) {
+                            _scrollController.animateTo(
+                              _scrollController.position.maxScrollExtent,
+                              duration: const Duration(milliseconds: 300),
+                              curve: Curves.easeOut,
+                            );
+                          }
+                        });
                       } else {
                         ScaffoldMessenger.of(context).showSnackBar(
                           SnackBar(
