@@ -163,6 +163,26 @@ class AuthProvider with ChangeNotifier {
     }
   }
 
+  /// Update user profile
+  Future<bool> updateProfile(Map<String, dynamic> data) async {
+    try {
+      _isLoading = true;
+      _error = null;
+      notifyListeners();
+
+      _currentUser = await _authService.updateProfile(data);
+
+      _isLoading = false;
+      notifyListeners();
+      return true;
+    } catch (e) {
+      _error = e.toString();
+      _isLoading = false;
+      notifyListeners();
+      return false;
+    }
+  }
+
   /// Clear error
   void clearError() {
     _error = null;

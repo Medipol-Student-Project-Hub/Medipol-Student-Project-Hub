@@ -207,6 +207,26 @@ class AuthService {
     }
   }
 
+  /// Update user profile
+  Future<User> updateProfile(Map<String, dynamic> data) async {
+    try {
+      final userType = await _storage.getUserType();
+      final endpoint = userType == 'student'
+          ? '${ApiConfig.baseUrl}/students/update_profile/'
+          : '${ApiConfig.baseUrl}/faculty/update_profile/';
+
+      final response = await _apiClient.patch(endpoint, data: data);
+
+      if (response.statusCode == 200) {
+        return _parseUser(response.data);
+      } else {
+        throw Exception('Failed to update profile');
+      }
+    } on DioException catch (e) {
+      throw _handleError(e);
+    }
+  }
+
   /// Check if user is logged in
   Future<bool> isLoggedIn() async {
     return await _storage.isLoggedIn();

@@ -120,7 +120,6 @@ class ProfilePage extends StatelessWidget {
         items: [
           _buildInfoRow(context, 'Email', student.email),
           _buildInfoRow(context, 'Department', student.department),
-          _buildInfoRow(context, 'Faculty', student.faculty),
           _buildInfoRow(context, 'Year', student.year),
         ],
       ),

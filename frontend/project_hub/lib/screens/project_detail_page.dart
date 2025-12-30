@@ -22,6 +22,7 @@ class _ProjectDetailPageState extends State<ProjectDetailPage> {
     final project = widget.project;
     final authProvider = Provider.of<AuthProvider>(context);
     final isOwner = authProvider.currentUser?.name == project.creator;
+    final isStudent = authProvider.userType == 'student';
 
     return Scaffold(
       appBar: AppBar(
@@ -251,7 +252,7 @@ class _ProjectDetailPageState extends State<ProjectDetailPage> {
           ],
         ),
       ),
-      bottomNavigationBar: isOwner ? null : Container(
+      bottomNavigationBar: (isOwner || !isStudent) ? null : Container(
         padding: const EdgeInsets.all(16),
         decoration: const BoxDecoration(
           color: Colors.white,

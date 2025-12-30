@@ -87,21 +87,48 @@ class _EditProfilePageState extends State<EditProfilePage> {
 
     setState(() => _isLoading = true);
 
-    // TODO: Implement actual API call to update profile
-    await Future.delayed(const Duration(seconds: 1));
+    final authProvider = context.read<AuthProvider>();
+    final user = authProvider.currentUser;
+
+    Map<String, dynamic> updateData = {
+      'name': _nameController.text.trim(),
+      'department': _departmentController.text.trim(),
+    };
+
+    if (user is Student) {
+      updateData['skills'] = _selectedSkills;
+    } else if (user is Faculty) {
+      if (_titleController != null) {
+        updateData['title'] = _titleController!.text.trim();
+      }
+      if (_officeController != null) {
+        updateData['office_location'] = _officeController!.text.trim();
+      }
+      updateData['specialization'] = _selectedSpecializations;
+    }
+
+    final success = await authProvider.updateProfile(updateData);
 
     if (!mounted) return;
 
     setState(() => _isLoading = false);
 
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        content: Text('Profile updated successfully!'),
-        backgroundColor: Colors.green,
-      ),
-    );
-
-    Navigator.pop(context);
+    if (success) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Profile updated successfully!'),
+          backgroundColor: Colors.green,
+        ),
+      );
+      Navigator.pop(context);
+    } else {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(authProvider.error ?? 'Failed to update profile'),
+          backgroundColor: Colors.red,
+        ),
+      );
+    }
   }
 
   @override
