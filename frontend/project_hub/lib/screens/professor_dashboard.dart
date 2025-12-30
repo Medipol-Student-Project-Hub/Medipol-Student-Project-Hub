@@ -117,7 +117,7 @@ class ProfessorDashboard extends StatelessWidget {
                   _buildProjectCard(
                     context,
                     title: 'AI Medical Diagnosis',
-                    students: const ['Beril Mutlu', 'Ayşe Çapacı'],
+                    students: const ['Beril Mutlu', 'Erva Şengül'],
                     progress: 15,
                     category: 'AI & ML',
                     lastUpdate: '2 days ago',
@@ -151,7 +151,7 @@ class ProfessorDashboard extends StatelessWidget {
                   _buildReviewCard(
                     context,
                     title: 'Milestone Completion Request',
-                    student: 'Ayşe Çapacı',
+                    student: 'Azra Karakaya',
                     type: 'Milestone',
                     priority: 'Medium',
                     date: 'Feb 17, 2025',
@@ -201,7 +201,7 @@ class ProfessorDashboard extends StatelessWidget {
                     context,
                     icon: LucideIcons.messageSquare,
                     color: const Color(0xFF10B981),
-                    title: 'New message from Ayşe Çapacı',
+                    title: 'New message from Erva Şengül',
                     time: '5 hours ago',
                   ),
                   _buildActivityItem(
