@@ -5,7 +5,7 @@ A collaborative platform for Medipol University students to share project ideas 
 ## Tech Stack
 - **Backend**: Django REST Framework
 - **Frontend**: Flutter
-- **Database**: SQLite (Development) / MySQL (Production)
+- **Database**: SQLite
 - **Authentication**: JWT (JSON Web Tokens)
 
 ## Team Members
@@ -29,8 +29,7 @@ Before running this project, ensure you have the following installed:
 - **Android Studio** (for Android development) or **Xcode** (for iOS development)
 
 ### Database
-- **SQLite**: Included with Python (for development)
-- **MySQL**: 8.0 or higher (optional, for production)
+- **SQLite**: Included with Python (default)
 
 ## Installation & Setup
 
@@ -73,18 +72,6 @@ pip install -r requirements.txt
 Create a `.env` file in the `backend` directory if you need custom configuration:
 
 ```env
-# Database Configuration (Optional - defaults to SQLite)
-DB_ENGINE=django.db.backends.sqlite3
-DB_NAME=db.sqlite3
-
-# For MySQL (uncomment and configure if needed)
-# DB_ENGINE=django.db.backends.mysql
-# DB_NAME=medipol_project_hub
-# DB_USER=your_mysql_username
-# DB_PASSWORD=your_mysql_password
-# DB_HOST=localhost
-# DB_PORT=3306
-
 # Django Secret Key (Optional - auto-generated if not set)
 SECRET_KEY=your-secret-key-here
 
@@ -169,62 +156,17 @@ flutter devices  # List available devices
 flutter run -d <device-id>
 ```
 
-## Database Setup (MySQL - Optional)
-
-If you want to use MySQL instead of SQLite:
-
-### 1. Install MySQL
-
-Download and install MySQL from [https://dev.mysql.com/downloads/](https://dev.mysql.com/downloads/)
-
-### 2. Create Database
-
-```sql
-CREATE DATABASE medipol_project_hub CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
-CREATE USER 'medipol_user'@'localhost' IDENTIFIED BY 'your_password';
-GRANT ALL PRIVILEGES ON medipol_project_hub.* TO 'medipol_user'@'localhost';
-FLUSH PRIVILEGES;
-```
-
-### 3. Install MySQL Client
-
-```bash
-pip install mysqlclient
-```
-
-### 4. Update Django Settings
-
-In `backend/config/settings.py`, update the DATABASES configuration:
-
-```python
-DATABASES = {
-    'default': {
-        'ENGINE': 'django.db.backends.mysql',
-        'NAME': 'medipol_project_hub',
-        'USER': 'medipol_user',
-        'PASSWORD': 'your_password',
-        'HOST': 'localhost',
-        'PORT': '3306',
-    }
-}
-```
-
-### 5. Run Migrations
-
-```bash
-python manage.py migrate
-```
-
 ## Sample User Accounts (After Running seed_data)
 
 ### Students
-- **Email**: `erva.sengul@medipol.edu.tr` | **Password**: `password123`
-- **Email**: `ayse.capaci@medipol.edu.tr` | **Password**: `password123`
-- **Email**: `beril.mutlu@medipol.edu.tr` | **Password**: `password123`
+- **Email**: `azra.karakaya@std.medipol.edu.tr` | **Password**: `pwd123`
+- **Email**: `erva.sengul@std.medipol.edu.tr` | **Password**: `pwd123`
+- **Email**: `ayse.capaci@std.medipol.edu.tr` | **Password**: `pwd123`
+- **Email**: `beril.mutlu@std.medipol.edu.tr` | **Password**: `pwd123`
 
 ### Faculty
-- **Email**: `ahmet.yilmaz@medipol.edu.tr` | **Password**: `password123`
-- **Email**: `mehmet.kaya@medipol.edu.tr` | **Password**: `password123`
+- **Email**: `ahmet.yilmaz@medipol.edu.tr` | **Password**: `pwd123`
+- **Email**: `mehmet.kaya@medipol.edu.tr` | **Password**: `pwd123`
 
 ## Project Structure
 
@@ -422,9 +364,8 @@ For production deployment:
 2. Configure proper `ALLOWED_HOSTS`
 3. Use environment variables for sensitive data
 4. Set up HTTPS
-5. Use a production database (MySQL/PostgreSQL)
-6. Configure proper CORS settings
-7. Use a production WSGI server (gunicorn/uwsgi)
+5. Configure proper CORS settings
+6. Use a production WSGI server (gunicorn/uwsgi)
 
 ### Data Persistence
 

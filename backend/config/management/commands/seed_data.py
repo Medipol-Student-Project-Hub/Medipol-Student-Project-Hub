@@ -145,7 +145,7 @@ class Command(BaseCommand):
                 }
             )
             if created:
-                user.set_password('password123')
+                user.set_password('pwd123')
                 user.save()
 
             faculty, _ = Faculty.objects.get_or_create(
@@ -165,6 +165,14 @@ class Command(BaseCommand):
     def create_students(self):
         """Create student users and profiles."""
         student_data = [
+            {
+                'email': 'azra.karakaya@std.medipol.edu.tr',
+                'name': 'Azra Karakaya',
+                'student_id': 'STU000',
+                'department': 'Computer Engineering',
+                'year': '3',
+                'skills': ['Flutter', 'Python', 'Django', 'Firebase'],
+            },
             {
                 'email': 'zeynep.arslan@std.medipol.edu.tr',
                 'name': 'Zeynep Arslan',
@@ -306,7 +314,7 @@ class Command(BaseCommand):
                 }
             )
             if created:
-                user.set_password('password123')
+                user.set_password('pwd123')
                 user.save()
 
             student, _ = Student.objects.get_or_create(
