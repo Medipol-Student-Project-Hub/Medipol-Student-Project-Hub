@@ -239,7 +239,13 @@ class AuthService {
       final response = await _apiClient.patch(endpoint, data: data);
 
       if (response.statusCode == 200) {
-        return _parseUser(response.data);
+        // Use stored userType directly since response structure may not include user_type
+        // This prevents incorrectly parsing student as faculty after profile update
+        if (userType == 'student') {
+          return Student.fromJson(response.data);
+        } else {
+          return Faculty.fromJson(response.data);
+        }
       } else {
         throw Exception('Failed to update profile');
       }
