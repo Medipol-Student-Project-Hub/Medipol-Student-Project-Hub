@@ -1,3 +1,10 @@
+/// Home Page - Main screen displaying project listings
+///
+/// Features:
+/// - Explore Projects tab: Shows all projects except user's own
+/// - My Projects tab: Shows projects owned or joined by the user
+/// - Search functionality to filter projects
+/// - Navigation to messaging, notifications, and profile
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
@@ -12,6 +19,7 @@ import 'notifications_page.dart';
 import 'professor_dashboard.dart';
 import 'join_requests_page.dart';
 
+/// Main home page widget with project listings
 class HomePage extends StatefulWidget {
   const HomePage({super.key});
 

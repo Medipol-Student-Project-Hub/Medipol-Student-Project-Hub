@@ -1,3 +1,11 @@
+/// Messaging Page - Real-time chat interface
+///
+/// Features:
+/// - Conversation list with unread indicators
+/// - Chat view with message bubbles
+/// - Send messages in real-time
+/// - Responsive layout (tablet shows split view)
+/// - Auto-scroll to newest messages
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
@@ -6,6 +14,7 @@ import '../providers/message_provider.dart';
 import '../models/message.dart';
 import 'new_conversation_page.dart';
 
+/// Main messaging screen with conversation list and chat view
 class MessagingPage extends StatefulWidget {
   const MessagingPage({super.key});
 

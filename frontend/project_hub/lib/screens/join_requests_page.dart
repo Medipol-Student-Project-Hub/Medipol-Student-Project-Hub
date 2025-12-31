@@ -1,7 +1,14 @@
+/// Join Requests Page - Manages project join requests
+///
+/// Features:
+/// - My Requests tab: Shows requests sent by the current user
+/// - Incoming Requests tab: Shows requests to join user's projects
+/// - Approve/Reject functionality for project owners
 import 'package:flutter/material.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 import '../services/project_service.dart';
 
+/// Page for viewing and managing project join requests
 class JoinRequestsPage extends StatefulWidget {
   const JoinRequestsPage({super.key});
 

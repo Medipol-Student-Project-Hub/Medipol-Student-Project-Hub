@@ -1,3 +1,11 @@
+/// Project Detail Page - Displays comprehensive project information
+///
+/// Features:
+/// - Project description, status, and progress
+/// - Team members and supervisor info
+/// - Skills and requirements listing
+/// - Join request functionality (for non-owners)
+/// - Edit button (for project owners only)
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../models/project.dart';
@@ -5,6 +13,7 @@ import '../providers/project_provider.dart';
 import '../providers/auth_provider.dart';
 import 'edit_project_page.dart';
 
+/// Detailed view of a single project with join functionality
 class ProjectDetailPage extends StatefulWidget {
   final Project project;
 
